@@ -33,6 +33,14 @@ pub struct PackMetaConfig {
     name: Option<String>,
     description: Option<String>,
     format: FormatType,
+    #[serde(default = "PackMetaConfig::default_icon_path")]
+    icon: PathBuf,
+}
+
+impl PackMetaConfig {
+    fn default_icon_path() -> PathBuf {
+        PathBuf::from("./pack.png")
+    }
 }
 
 #[derive(Debug, Deserialize, Default, PartialEq, Eq)]
@@ -75,6 +83,7 @@ pub struct PackConfig {
 }
 
 const PACK_META_NAME: &str = "pack.mcmeta";
+const PACK_ICON_NAME: &str = "pack.png";
 
 impl PackConfig {
     pub fn build_packs(&self, args: &Args, profile: &str, build: &str) -> anyhow::Result<()> {
@@ -120,13 +129,17 @@ impl PackConfig {
             .filter(|f| f.is_file());
 
             for file in files {
-                let to = asset_path.join(&file);
+                let file_absolute = file.canonicalize()?;
+                let relative_file = file_absolute.strip_prefix(&bundle_path.canonicalize()?)?;
+                let to = asset_path.join(relative_file);
                 let mut to_path = to.clone();
                 to_path.pop();
                 std::fs::create_dir_all(&to_path)?;
                 std::fs::copy(file, to)?;
             }
         }
+
+        std::fs::copy(&self.pack.icon, compile_path.join(PACK_ICON_NAME))?;
 
         match profile.relocation {
             ExportRelocation::None => (),

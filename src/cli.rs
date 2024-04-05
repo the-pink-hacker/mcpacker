@@ -13,6 +13,10 @@ pub enum Subcommands {
 
         /// The pack(s) that should be built.
         build: String,
+
+        /// Sets up a server to watch for file changes.
+        #[arg(long)]
+        listen: bool,
     },
 }
 

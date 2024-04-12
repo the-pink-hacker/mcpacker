@@ -15,7 +15,7 @@ fn create_file_listener(
     profile: String,
     build: String,
 ) -> notify::Result<INotifyWatcher> {
-    let config = notify::Config::default().with_poll_interval(Duration::from_secs(1));
+    let config = notify::Config::default().with_poll_interval(Duration::from_secs(2));
 
     notify::Watcher::new(
         move |res| match res {
@@ -24,12 +24,16 @@ fn create_file_listener(
                 let current_time = Instant::now();
 
                 let config = args.parse_config().expect("Failed to parse config.");
-                config
-                    .build_packs(&args, &profile, &build)
-                    .expect("Failed to build.");
 
-                let time_passed = current_time.elapsed();
-                println!("Completed in {:.2} seconds.", time_passed.as_secs_f32());
+                match config.build_packs(&args, &profile, &build) {
+                    Ok(_) => {
+                        let time_passed = current_time.elapsed();
+                        println!("Completed in {:.2} seconds.", time_passed.as_secs_f32());
+                    }
+                    Err(e) => {
+                        println!("Build error: {:?}", e);
+                    }
+                }
             }
             Err(e) => println!("File listener error: {:?}", e),
         },

@@ -1,28 +1,58 @@
 pub mod export;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{BTreeSet, HashMap},
+    path::PathBuf,
+};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::cli::Args;
 
 use self::export::{ExportOutputType, ExportRelocation, JsonExportType, PackCompiler};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum FormatType {
     Single(u8),
-    Range { minimum: u8, maximum: u8 },
-    List(Vec<u8>),
+    Range {
+        #[serde(alias = "minimum", rename = "min_inclusive")]
+        minimum: u8,
+        #[serde(alias = "maximum", rename = "max_inclusive")]
+        maximum: u8,
+    },
+    List(BTreeSet<u8>),
 }
 
-impl From<FormatType> for Vec<u8> {
-    fn from(value: FormatType) -> Self {
-        match value {
-            FormatType::Single(raw_value) => vec![raw_value],
-            FormatType::Range { minimum, maximum } => (minimum..maximum).collect::<Vec<_>>(),
-            FormatType::List(raw_values) => raw_values,
+impl FormatType {
+    pub fn min(&self) -> u8 {
+        match self {
+            Self::Single(format) => format.clone(),
+            Self::Range {
+                minimum,
+                maximum: _,
+            } => minimum.clone(),
+            Self::List(formats) => formats.first().expect("Format list was empty.").clone(),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Single(_) => 1,
+            Self::Range { minimum, maximum } => (maximum - minimum) as usize,
+            Self::List(formats) => formats.len(),
+        }
+    }
+
+    pub fn get_formats(self) -> (u8, Option<Self>) {
+        let minimum = self.min();
+
+        let formats = match self {
+            Self::Single(_) => None,
+            _ => Some(self),
+        };
+
+        (minimum, formats)
     }
 }
 
@@ -32,19 +62,52 @@ impl Default for FormatType {
     }
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct PackMetaConfig {
     name: Option<String>,
+    suffix: Option<String>,
     description: Option<String>,
-    format: FormatType,
-    #[serde(default = "PackMetaConfig::default_icon_path")]
-    icon: PathBuf,
+    format: Option<FormatType>,
+    icon: Option<PathBuf>,
 }
 
 impl PackMetaConfig {
-    fn default_icon_path() -> PathBuf {
-        PathBuf::from("./pack.png")
+    pub fn condence(global: Self, build: Self, profile: Self) -> Self {
+        let mut suffix = String::new();
+
+        Self::concat_suffix(profile.suffix, &mut suffix);
+        Self::concat_suffix(build.suffix, &mut suffix);
+        Self::concat_suffix(global.suffix, &mut suffix);
+
+        Self {
+            name: Self::condence_option(global.name, build.name, profile.name),
+            suffix: Some(suffix),
+            description: Self::condence_option(
+                global.description,
+                build.description,
+                profile.description,
+            ),
+            format: Self::condence_option(global.format, build.format, profile.format),
+            icon: Self::condence_option(global.icon, build.icon, profile.icon),
+        }
+    }
+
+    fn concat_suffix(suffix: Option<String>, output: &mut String) {
+        if let Some(value) = suffix {
+            output.push(' ');
+            *output += &value;
+        }
+    }
+
+    fn condence_option<T>(global: Option<T>, build: Option<T>, profile: Option<T>) -> Option<T> {
+        if profile.is_some() {
+            profile
+        } else if build.is_some() {
+            build
+        } else {
+            global
+        }
     }
 }
 
@@ -54,12 +117,13 @@ pub struct ProfileConfig {
     pub output_type: ExportOutputType,
     pub relocation: ExportRelocation,
     pub json_type: JsonExportType,
+    pub pack: PackMetaConfig,
 }
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(default)]
 pub struct CollectionConfig {
-    pub pack: Option<PackMetaConfig>,
+    pub pack: PackMetaConfig,
     pub bundles: Vec<PathBuf>,
 }
 
@@ -76,14 +140,13 @@ impl PackConfig {
         let profile = self.profile.get(profile).expect("Couldn't find profile.");
         let build = self.build.get(build).expect("Couldn't find build.");
 
-        let name = self.pack.name.clone().unwrap_or_default();
-
-        let compile_path = args.compile.join(&name);
+        let pack =
+            PackMetaConfig::condence(self.pack.clone(), build.pack.clone(), profile.pack.clone());
 
         let compiler = PackCompiler::from(
-            compile_path,
-            args.minecraft.join("resourcepacks").join(name),
-            &self.pack,
+            args.compile.clone(),
+            args.minecraft.clone(),
+            &pack,
             profile,
             build,
         );

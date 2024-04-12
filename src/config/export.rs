@@ -5,14 +5,17 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use serde_json::ser::PrettyFormatter;
 
-use super::{CollectionConfig, PackMetaConfig, ProfileConfig};
+use super::{CollectionConfig, FormatType, PackMetaConfig, ProfileConfig};
 
 #[derive(Debug, Serialize, Default)]
 struct PackMCMetaContents {
     pack_format: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    supported_formats: Option<FormatType>,
 }
 
 #[derive(Debug, Serialize, Default)]
@@ -21,16 +24,15 @@ pub struct PackMCMeta {
 }
 
 impl PackMCMeta {
-    fn basic(pack: &PackMetaConfig) -> Self {
-        let pack_formats: Vec<_> = pack.format.clone().into();
+    fn from(pack: &PackMetaConfig) -> Self {
+        let (pack_format, supported_formats) =
+            pack.format.clone().unwrap_or_default().get_formats();
 
         Self {
             pack: PackMCMetaContents {
-                pack_format: *pack_formats
-                    .iter()
-                    .min()
-                    .expect("Failed to get minimum pack format version."),
                 description: pack.description.clone(),
+                pack_format,
+                supported_formats,
             },
         }
     }
@@ -62,13 +64,21 @@ pub enum JsonExportType {
 }
 
 impl JsonExportType {
-    pub fn to_string<T>(&self, value: &T) -> serde_json::Result<String>
+    pub fn to_string<T>(&self, value: &T) -> anyhow::Result<String>
     where
         T: ?Sized + Serialize,
     {
         match self {
-            Self::Compact => serde_json::to_string(value),
-            Self::Pretty => serde_json::to_string_pretty(value),
+            Self::Compact => Ok(serde_json::to_string(value)?),
+            Self::Pretty => {
+                let formatter = PrettyFormatter::with_indent(b"    ");
+                let mut writter = Vec::new();
+                let mut serializer =
+                    serde_json::ser::Serializer::with_formatter(&mut writter, formatter);
+
+                value.serialize(&mut serializer)?;
+                Ok(String::from_utf8(writter)?)
+            }
         }
     }
 }
@@ -89,18 +99,26 @@ const PACK_ICON_NAME: &str = "pack.png";
 impl<'a, 'b, 'c> PackCompiler<'a, 'b, 'c> {
     pub fn from(
         compile_path: PathBuf,
-        resourcepack_path: PathBuf,
+        minecraft_path: PathBuf,
         pack: &'a PackMetaConfig,
         profile: &'b ProfileConfig,
         build: &'c CollectionConfig,
     ) -> Self {
+        let mut name = pack.name.clone().unwrap_or_default();
+
+        if let Some(suffix) = &pack.suffix {
+            name += suffix;
+        }
+
+        let compile_path = compile_path.join(&name);
+
         Self {
             pack,
             profile,
             build,
             bundles_path: PathBuf::from("src"),
             asset_path: compile_path.join("assets"),
-            resourcepack_path,
+            resourcepack_path: minecraft_path.join("resourcepacks").join(name),
             compile_path,
         }
     }
@@ -129,7 +147,7 @@ impl<'a, 'b, 'c> PackCompiler<'a, 'b, 'c> {
     }
 
     fn compile_meta(&self) -> anyhow::Result<()> {
-        let meta = PackMCMeta::basic(&self.pack);
+        let meta = PackMCMeta::from(&self.pack);
         let raw = self.profile.json_type.to_string(&meta)?;
         let mut file = File::create(&self.compile_path.join(PACK_META_NAME))?;
         file.write_all(raw.as_bytes())?;
@@ -138,7 +156,14 @@ impl<'a, 'b, 'c> PackCompiler<'a, 'b, 'c> {
     }
 
     fn compile_icon(&self) -> std::io::Result<()> {
-        std::fs::copy(&self.pack.icon, &self.compile_path.join(PACK_ICON_NAME))?;
+        std::fs::copy(
+            &self
+                .pack
+                .icon
+                .clone()
+                .unwrap_or_else(|| PathBuf::from("./pack.png")),
+            &self.compile_path.join(PACK_ICON_NAME),
+        )?;
         Ok(())
     }
 

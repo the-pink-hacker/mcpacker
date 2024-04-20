@@ -3,11 +3,10 @@ pub mod export;
 use std::{
     collections::{BTreeSet, HashMap},
     path::PathBuf,
+    sync::Arc,
 };
 
 use serde::{Deserialize, Serialize};
-
-use crate::cli::Args;
 
 use self::export::{ExportOutputType, ExportRelocation, JsonExportType, PackCompiler};
 
@@ -111,7 +110,7 @@ impl PackMetaConfig {
     }
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct ProfileConfig {
     pub output_type: ExportOutputType,
@@ -120,14 +119,14 @@ pub struct ProfileConfig {
     pub pack: PackMetaConfig,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct CollectionConfig {
     pub pack: PackMetaConfig,
     pub bundles: Vec<PathBuf>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct PackConfig {
     pack: PackMetaConfig,
@@ -136,22 +135,29 @@ pub struct PackConfig {
 }
 
 impl PackConfig {
-    pub fn build_packs(&self, args: &Args, profile: &str, build: &str) -> anyhow::Result<()> {
+    pub fn find_profile(&self, profile: &str) -> Arc<ProfileConfig> {
         let profile = self.profile.get(profile).expect("Couldn't find profile.");
-        let build = self.build.get(build).expect("Couldn't find build.");
 
+        Arc::new(profile.clone())
+    }
+
+    pub fn create_compiler(
+        &self,
+        compile_path: &PathBuf,
+        minecraft_path: &PathBuf,
+        profile: Arc<ProfileConfig>,
+        build: &str,
+    ) -> PackCompiler {
+        let build = self.build.get(build).expect("Couldn't find build.");
         let pack =
             PackMetaConfig::condence(self.pack.clone(), build.pack.clone(), profile.pack.clone());
 
-        let compiler = PackCompiler::from(
-            args.compile.clone(),
-            args.minecraft.clone(),
-            &pack,
+        PackCompiler::from(
+            compile_path.clone(),
+            minecraft_path.clone(),
+            pack,
             profile,
-            build,
-        );
-        compiler.run()?;
-
-        Ok(())
+            build.clone(),
+        )
     }
 }

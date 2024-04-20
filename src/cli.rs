@@ -2,8 +2,6 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::config::PackConfig;
-
 #[derive(Debug, Subcommand, Clone)]
 pub enum Subcommands {
     /// Build one or many packs from the config.
@@ -12,7 +10,7 @@ pub enum Subcommands {
         profile: String,
 
         /// The pack(s) that should be built.
-        build: String,
+        builds: Vec<String>,
 
         /// Sets up a server to watch for file changes.
         #[arg(long)]
@@ -38,11 +36,4 @@ pub struct Args {
 
     #[command(subcommand)]
     pub commands: Subcommands,
-}
-
-impl Args {
-    pub fn parse_config(&self) -> anyhow::Result<PackConfig> {
-        let data = std::fs::read_to_string(&self.config)?;
-        Ok(toml::from_str(&data)?)
-    }
 }

@@ -2,6 +2,8 @@ use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
+    sync::Arc,
+    time::Instant,
 };
 
 use serde::{Deserialize, Serialize};
@@ -38,7 +40,7 @@ impl PackMCMeta {
     }
 }
 
-#[derive(Debug, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Default, PartialEq, Eq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum ExportOutputType {
     #[default]
@@ -46,7 +48,7 @@ pub enum ExportOutputType {
     Zip,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum ExportRelocation {
     #[default]
@@ -55,7 +57,7 @@ pub enum ExportRelocation {
     Symbolic,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum JsonExportType {
     #[default]
@@ -83,26 +85,26 @@ impl JsonExportType {
     }
 }
 
-pub struct PackCompiler<'a, 'b, 'c> {
+pub struct PackCompiler {
     compile_path: PathBuf,
     asset_path: PathBuf,
     bundles_path: PathBuf,
     resourcepack_path: PathBuf,
-    pack: &'a PackMetaConfig,
-    profile: &'b ProfileConfig,
-    build: &'c CollectionConfig,
+    pack: PackMetaConfig,
+    profile: Arc<ProfileConfig>,
+    build: CollectionConfig,
 }
 
 const PACK_META_NAME: &str = "pack.mcmeta";
 const PACK_ICON_NAME: &str = "pack.png";
 
-impl<'a, 'b, 'c> PackCompiler<'a, 'b, 'c> {
+impl PackCompiler {
     pub fn from(
         compile_path: PathBuf,
         minecraft_path: PathBuf,
-        pack: &'a PackMetaConfig,
-        profile: &'b ProfileConfig,
-        build: &'c CollectionConfig,
+        pack: PackMetaConfig,
+        profile: Arc<ProfileConfig>,
+        build: CollectionConfig,
     ) -> Self {
         let mut name = pack.name.clone().unwrap_or_default();
 
@@ -123,7 +125,21 @@ impl<'a, 'b, 'c> PackCompiler<'a, 'b, 'c> {
         }
     }
 
-    pub fn run(&self) -> anyhow::Result<()> {
+    pub fn run(&self) {
+        println!("Compiling...");
+
+        let current_time = Instant::now();
+
+        match self.run_failable() {
+            Ok(_) => {
+                let time_passed = current_time.elapsed();
+                println!("Completed in {:.2} seconds.", time_passed.as_secs_f32());
+            }
+            Err(e) => println!("Build error: {:}", e),
+        }
+    }
+
+    fn run_failable(&self) -> anyhow::Result<()> {
         self.setup_compile_path()?;
         self.compile_meta()?;
         self.compile_icon()?;

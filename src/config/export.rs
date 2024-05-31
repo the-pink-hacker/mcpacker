@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::Write,
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     sync::Arc,
     time::Instant,
@@ -8,6 +8,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use serde_json::ser::PrettyFormatter;
+use zip::{write::SimpleFileOptions, ZipWriter};
 
 use super::{CollectionConfig, FormatType, PackMetaConfig, ProfileConfig};
 
@@ -148,6 +149,7 @@ impl PackCompiler {
             self.compile_bundle(bundle)?;
         }
 
+        self.output()?;
         self.relocate()?;
 
         Ok(())
@@ -220,14 +222,71 @@ impl PackCompiler {
     }
 
     fn relocate_symbolic(&self) -> anyhow::Result<()> {
-        let expanded_link = shellexpand::path::tilde(&self.resourcepack_path);
+        let expanded_pack_path = shellexpand::path::tilde(&self.resourcepack_path);
+        let (expanded_source, expanded_link) = match self.profile.output_type {
+            ExportOutputType::Zip => (
+                self.compile_path.with_extension("zip").canonicalize()?,
+                expanded_pack_path.with_extension("zip"),
+            ),
+            ExportOutputType::Uncompressed => (
+                self.compile_path.canonicalize()?,
+                expanded_pack_path.to_path_buf(),
+            ),
+        };
 
         if expanded_link.exists() {
             return Ok(());
         }
 
-        let compile_path_absolute = self.compile_path.canonicalize()?;
-        symlink::symlink_dir(compile_path_absolute, expanded_link)?;
+        symlink::symlink_auto(expanded_source, expanded_link)?;
+
+        Ok(())
+    }
+
+    fn output(&self) -> anyhow::Result<()> {
+        match self.profile.output_type {
+            ExportOutputType::Zip => self.zip(),
+            ExportOutputType::Uncompressed => Ok(()),
+        }
+    }
+
+    fn zip(&self) -> anyhow::Result<()> {
+        let zip_path = self.compile_path.with_extension("zip");
+        let zip_file = File::create(zip_path)?;
+        let mut zip = ZipWriter::new(zip_file);
+        let zip_options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+
+        let files_paths = glob::glob(
+            self.compile_path
+                .join("**")
+                .join("*")
+                .to_str()
+                .expect("Couldn't convert path to unicode."),
+        )
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|f| f.is_file())
+        .collect::<Vec<_>>();
+
+        for file_path in &files_paths {
+            let file = File::open(file_path)?;
+            let absolute_path = file_path.canonicalize()?;
+            let file_zip_path = absolute_path
+                .strip_prefix(self.compile_path.canonicalize()?)?
+                .to_str()
+                .unwrap();
+
+            zip.start_file(file_zip_path, zip_options)?;
+
+            let mut buffer = Vec::new();
+            io::copy(&mut file.take(u64::MAX), &mut buffer)?;
+
+            zip.write_all(&buffer)?;
+        }
+
+        zip.finish()?;
+
         Ok(())
     }
 }

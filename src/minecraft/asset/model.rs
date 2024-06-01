@@ -12,6 +12,7 @@ pub struct Model {
     textures: Option<IndexMap<String, IdentifierOrVariable>>,
     elements: Option<Vec<ModelElement>>,
     gui_light: Option<GuiLightDirection>,
+    overrides: Option<Vec<ItemModelOverride>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -104,4 +105,10 @@ pub struct ItemDisplay {
 pub enum GuiLightDirection {
     Front,
     Side,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ItemModelOverride {
+    predicate: IndexMap<String, i32>,
+    model: Identifier,
 }

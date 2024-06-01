@@ -1,24 +1,24 @@
 use std::collections::HashMap;
 
-use super::identifier::Identifier;
+use super::{identifier::Identifier, rotation::StateRotation};
 
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Blockstate {
-    Varient {
-        variants: HashMap<String, ModelState>,
-    },
-    Multipart {
-        multipart: Vec<BlockstateMultipart>,
-    },
+    Variants(HashMap<String, ModelState>),
+    Multipart { multipart: Vec<BlockstateMultipart> },
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[skip_serializing_none]
+#[serde_as]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum ModelState {
     Single {
+        #[serde_as(as = "DisplayFromStr")]
         model: Identifier,
         x: Option<StateRotation>,
         y: Option<StateRotation>,
@@ -27,8 +27,11 @@ pub enum ModelState {
     Weighted(Vec<WeightedState>),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[skip_serializing_none]
+#[serde_as]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct WeightedState {
+    #[serde_as(as = "DisplayFromStr")]
     model: Identifier,
     x: Option<StateRotation>,
     y: Option<StateRotation>,
@@ -36,25 +39,90 @@ pub struct WeightedState {
     weight: Option<u8>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub enum StateRotation {
-    Degrees0,
-    Degrees90,
-    Degrees180,
-    Degrees270,
-    Degrees360,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct BlockstateMultipart {
     when: HashMap<String, StateValue>,
     apply: ModelState,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum StateValue {
     Boolean(bool),
     Integer(u8),
     Enum(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! deserialize_test {
+        ($name:ident, $raw:literal, $expected: expr $(,)?) => {
+            #[test]
+            fn $name() {
+                let parsed: Blockstate = serde_json::from_str($raw).unwrap();
+                assert_eq!(parsed, $expected);
+            }
+        };
+    }
+
+    deserialize_test!(
+        deserialize_variant_single,
+        r#"{
+            "variants": {
+                "test=1234": {
+                    "model": "minecraft:block/dirt",
+                    "x": 180,
+                    "uvlock": true
+                }
+            }
+        }"#,
+        Blockstate::Variants(HashMap::from([(
+            "test=1234".to_string(),
+            ModelState::Single {
+                model: Identifier::minecraft("block/dirt"),
+                x: Some(StateRotation::Degrees180),
+                y: None,
+                uvlock: Some(true),
+            },
+        )]))
+    );
+
+    deserialize_test!(
+        deserialize_variant_multiple,
+        r#"{
+            "variants": {
+                "": [
+                    {
+                        "model": "minecraft:block/grass_block"
+                    },
+                    {
+                        "model": "minecraft:block/grass_block",
+                        "x": 450,
+                        "weight": 2
+                    }
+                ]
+            }
+        }"#,
+        Blockstate::Variants(HashMap::from([(
+            String::new(),
+            ModelState::Weighted(vec![
+                WeightedState {
+                    model: Identifier::minecraft("block/grass_block"),
+                    x: None,
+                    y: None,
+                    uvlock: None,
+                    weight: None,
+                },
+                WeightedState {
+                    model: Identifier::minecraft("block/grass_block"),
+                    x: Some(StateRotation::Degrees90),
+                    y: None,
+                    uvlock: None,
+                    weight: Some(2),
+                }
+            ])
+        )]))
+    );
 }

@@ -1,10 +1,10 @@
-use std::path::PathBuf;
+use std::{fmt, path::PathBuf, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_NAMESPACE: &str = "minecraft";
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct Identifier {
     namespace: String,
     path: PathBuf,
@@ -30,24 +30,11 @@ impl Identifier {
     }
 }
 
-impl TryFrom<&str> for Identifier {
-    type Error = anyhow::Error;
+impl FromStr for Identifier {
+    type Err = anyhow::Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let (namespace, path) = value
-            .split_once(':')
-            .unwrap_or_else(|| (DEFAULT_NAMESPACE, value));
-        Ok(Self::new(namespace, PathBuf::try_from(path)?))
-    }
-}
-
-impl TryFrom<String> for Identifier {
-    type Error = anyhow::Error;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let (namespace, path) = value
-            .split_once(':')
-            .unwrap_or_else(|| (DEFAULT_NAMESPACE, &value));
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (namespace, path) = s.split_once(":").unwrap_or_else(|| (DEFAULT_NAMESPACE, s));
         Ok(Self::new(namespace, PathBuf::try_from(path)?))
     }
 }
@@ -55,6 +42,21 @@ impl TryFrom<String> for Identifier {
 impl From<Identifier> for String {
     fn from(value: Identifier) -> Self {
         value.to_string()
+    }
+}
+
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.to_string())
+    }
+}
+
+impl Serialize for Identifier {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -66,21 +68,21 @@ mod tests {
     fn string_to_identifier_namespace_minecraft() {
         let raw = "minecraft:block/oak_planks";
         let expected = Identifier::minecraft("block/oak_planks");
-        assert_eq!(expected, Identifier::try_from(raw).unwrap());
+        assert_eq!(expected, Identifier::from_str(raw).unwrap());
     }
 
     #[test]
     fn string_to_identifier_namespace_other() {
         let raw = "quark:block/oak_planks";
         let expected = Identifier::new("quark", "block/oak_planks");
-        assert_eq!(expected, Identifier::try_from(raw).unwrap());
+        assert_eq!(expected, Identifier::from_str(raw).unwrap());
     }
 
     #[test]
     fn string_to_identifier() {
         let raw = "block/oak_planks";
         let expected = Identifier::minecraft("block/oak_planks");
-        assert_eq!(expected, Identifier::try_from(raw).unwrap());
+        assert_eq!(expected, Identifier::from_str(raw).unwrap());
     }
 
     #[test]

@@ -732,6 +732,7 @@ dependencies = [
  "anyhow",
  "clap",
  "glob",
+ "indexmap 2.2.6",
  "notify",
  "rayon",
  "serde",

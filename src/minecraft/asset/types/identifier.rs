@@ -24,10 +24,6 @@ impl Identifier {
             path: path.into(),
         }
     }
-
-    pub fn to_string(&self) -> String {
-        format!("{}:{}", self.namespace, self.path.to_string_lossy())
-    }
 }
 
 impl FromStr for Identifier {
@@ -47,7 +43,11 @@ impl From<Identifier> for String {
 
 impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.to_string())
+        f.write_str(&format!(
+            "{}:{}",
+            self.namespace,
+            self.path.to_string_lossy()
+        ))
     }
 }
 

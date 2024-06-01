@@ -1,14 +1,13 @@
-use std::collections::HashMap;
-
 use super::types::{identifier::Identifier, rotation::StateRotation};
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Blockstate {
-    Variants(HashMap<String, ModelState>),
+    Variants(IndexMap<String, ModelState>),
     Multipart { multipart: Vec<BlockstateMultipart> },
 }
 
@@ -38,7 +37,7 @@ pub struct WeightedState {
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct BlockstateMultipart {
-    when: HashMap<String, StateValue>,
+    when: IndexMap<String, StateValue>,
     apply: ModelState,
 }
 
@@ -74,7 +73,7 @@ mod tests {
                 }
             }
         }"#,
-        Blockstate::Variants(HashMap::from([(
+        Blockstate::Variants(IndexMap::from([(
             "test=1234".to_string(),
             ModelState::Single {
                 model: Identifier::minecraft("block/dirt"),
@@ -101,7 +100,7 @@ mod tests {
                 ]
             }
         }"#,
-        Blockstate::Variants(HashMap::from([(
+        Blockstate::Variants(IndexMap::from([(
             String::new(),
             ModelState::Weighted(vec![
                 WeightedState {

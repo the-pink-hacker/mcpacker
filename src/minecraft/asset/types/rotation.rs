@@ -7,7 +7,6 @@ pub enum StateRotation {
     Degrees90,
     Degrees180,
     Degrees270,
-    Degrees360,
 }
 
 impl<'de> Deserialize<'de> for StateRotation {
@@ -40,7 +39,6 @@ impl From<StateRotation> for u16 {
             StateRotation::Degrees90 => 90,
             StateRotation::Degrees180 => 180,
             StateRotation::Degrees270 => 270,
-            StateRotation::Degrees360 => 360,
         }
     }
 }
@@ -68,5 +66,52 @@ impl<'de> Visitor<'de> for StateRotationVisitor {
         E: serde::de::Error,
     {
         StateRotation::try_from(v).map_err(|e| E::custom(e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn number_to_rotation_0() {
+        assert_eq!(StateRotation::Degrees0, StateRotation::try_from(0).unwrap())
+    }
+
+    #[test]
+    fn number_to_rotation_90() {
+        assert_eq!(
+            StateRotation::Degrees90,
+            StateRotation::try_from(90).unwrap()
+        )
+    }
+
+    #[test]
+    fn number_to_rotation_180() {
+        assert_eq!(
+            StateRotation::Degrees180,
+            StateRotation::try_from(180).unwrap()
+        )
+    }
+
+    #[test]
+    fn number_to_rotation_270() {
+        assert_eq!(
+            StateRotation::Degrees270,
+            StateRotation::try_from(270).unwrap()
+        )
+    }
+
+    #[test]
+    fn number_to_rotation_90_alt() {
+        assert_eq!(
+            StateRotation::Degrees90,
+            StateRotation::try_from(450).unwrap()
+        )
+    }
+
+    #[test]
+    fn number_to_rotation_unaligned() {
+        assert!(StateRotation::try_from(1).is_err())
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{identifier::Identifier, rotation::StateRotation};
+use super::types::{identifier::Identifier, rotation::StateRotation};
 
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};

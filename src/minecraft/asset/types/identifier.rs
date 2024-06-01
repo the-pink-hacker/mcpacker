@@ -1,10 +1,10 @@
 use std::{fmt, path::PathBuf, str::FromStr};
 
-use serde::{Deserialize, Serialize};
+use serde::{de::Visitor, Deserialize, Serialize};
 
 const DEFAULT_NAMESPACE: &str = "minecraft";
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Identifier {
     namespace: String,
     path: PathBuf,
@@ -57,6 +57,32 @@ impl Serialize for Identifier {
         S: serde::Serializer,
     {
         serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for Identifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_any(IdentifierVisitor)
+    }
+}
+
+struct IdentifierVisitor;
+
+impl<'de> Visitor<'de> for IdentifierVisitor {
+    type Value = Identifier;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a minecraft resource identifier; optionally, with a namespace")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Identifier::from_str(v).map_err(|e| E::custom(e))
     }
 }
 

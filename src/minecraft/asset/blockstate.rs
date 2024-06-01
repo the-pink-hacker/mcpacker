@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::types::{identifier::Identifier, rotation::StateRotation};
 
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
+use serde_with::skip_serializing_none;
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -13,12 +13,10 @@ pub enum Blockstate {
 }
 
 #[skip_serializing_none]
-#[serde_as]
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum ModelState {
     Single {
-        #[serde_as(as = "DisplayFromStr")]
         model: Identifier,
         x: Option<StateRotation>,
         y: Option<StateRotation>,
@@ -28,10 +26,8 @@ pub enum ModelState {
 }
 
 #[skip_serializing_none]
-#[serde_as]
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct WeightedState {
-    #[serde_as(as = "DisplayFromStr")]
     model: Identifier,
     x: Option<StateRotation>,
     y: Option<StateRotation>,

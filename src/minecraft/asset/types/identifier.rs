@@ -1,10 +1,22 @@
-use std::{fmt, path::PathBuf, str::FromStr};
+use std::{
+    convert::Infallible,
+    fmt,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
+use anyhow::Context;
 use serde::{de::Visitor, Deserialize, Serialize};
 
 const DEFAULT_NAMESPACE: &str = "minecraft";
 
 #[derive(Debug, PartialEq, Eq)]
+pub enum AssetType {
+    Model,
+    Blockstate,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Identifier {
     namespace: String,
     path: PathBuf,
@@ -24,14 +36,47 @@ impl Identifier {
             path: path.into(),
         }
     }
+
+    pub fn from_path(value: &Path) -> anyhow::Result<(AssetType, Self)> {
+        let mut path_list = value.iter();
+
+        let namespace = path_list
+            .next()
+            .map_or(None, |f| f.to_str())
+            .with_context(|| {
+                format!(
+                    "Failed to parse namespace from path: {}",
+                    value.to_string_lossy()
+                )
+            })?;
+
+        let asset_type = path_list
+            .next()
+            .map_or(None, |f| f.to_str())
+            .map_or(None, |f| match f {
+                "models" => Some(AssetType::Model),
+                "blockstates" => Some(AssetType::Blockstate),
+                _ => None,
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to parse asset type from path: {}",
+                    value.to_string_lossy()
+                )
+            })?;
+
+        let asset_path = path_list.collect::<PathBuf>().with_extension("");
+
+        Ok((asset_type, Identifier::new(namespace, asset_path)))
+    }
 }
 
 impl FromStr for Identifier {
-    type Err = anyhow::Error;
+    type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (namespace, path) = s.split_once(":").unwrap_or_else(|| (DEFAULT_NAMESPACE, s));
-        Ok(Self::new(namespace, PathBuf::try_from(path)?))
+        Ok(Self::new(namespace, PathBuf::from(path)))
     }
 }
 
@@ -114,12 +159,35 @@ mod tests {
     #[test]
     fn identifier_to_string_minecraft() {
         let identifier = Identifier::minecraft("block/dirt");
-        assert_eq!("minecraft:block/dirt", Into::<String>::into(identifier));
+        assert_eq!("minecraft:block/dirt", String::from(identifier));
     }
 
     #[test]
     fn identifier_to_string_other() {
-        let identifier = Identifier::new("quark", "block/dirt");
-        assert_eq!("quark:block/dirt", Into::<String>::into(identifier));
+        let id = Identifier::new("quark", "block/dirt");
+        assert_eq!("quark:block/dirt", String::from(id));
+    }
+
+    #[test]
+    fn from_path_minecraft_model() {
+        let id = Identifier::minecraft("block/sponge");
+        let result =
+            Identifier::from_path(Path::new("minecraft/models/block/sponge.json")).unwrap();
+        assert_eq!((AssetType::Model, id), result);
+    }
+
+    #[test]
+    fn from_path_minecraft_blockstate() {
+        let id = Identifier::minecraft("block/sponge");
+        let result =
+            Identifier::from_path(Path::new("minecraft/blockstates/block/sponge.json")).unwrap();
+        assert_eq!((AssetType::Blockstate, id), result);
+    }
+
+    #[test]
+    fn from_path_other() {
+        let id = Identifier::new("quark", "block/sponge");
+        let result = Identifier::from_path(Path::new("quark/models/block/sponge.json")).unwrap();
+        assert_eq!((AssetType::Model, id), result);
     }
 }

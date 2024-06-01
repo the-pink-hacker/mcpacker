@@ -38,8 +38,8 @@ pub enum Direction {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ModelElement {
-    from: [i8; 3],
-    to: [i8; 3],
+    from: [f32; 3],
+    to: [f32; 3],
     rotation: Option<ElementRotation>,
     shade: Option<bool>,
     faces: Option<ElementFaces>,
@@ -57,7 +57,7 @@ pub struct ElementFaces {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ElementRotation {
-    origin: [i8; 3],
+    origin: [f32; 3],
     axis: Axis,
     angle: f32,
     rescale: Option<bool>,
@@ -73,12 +73,12 @@ pub enum Axis {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ElementFace {
-    uv: Option<[u8; 4]>,
-    textures: VariableIdentifier,
+    uv: Option<[f32; 4]>,
+    texture: VariableIdentifier,
     cullface: Option<Direction>,
-    rotation: StateRotation,
+    rotation: Option<StateRotation>,
     #[serde(rename = "tintindex")]
-    tint_index: i32,
+    tint_index: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

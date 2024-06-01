@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod compile;
 pub mod config;
 pub mod minecraft;
 pub mod runner;

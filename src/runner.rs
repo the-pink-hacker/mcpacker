@@ -1,10 +1,17 @@
-use std::{path::PathBuf, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use anyhow::Context;
 use notify::{INotifyWatcher, RecursiveMode, Watcher};
 use rayon::prelude::*;
 
-use crate::config::{export::PackCompiler, PackConfig};
+use crate::{
+    compile::{tracking::AssetTracker, PackCompiler},
+    config::PackConfig,
+};
 
 pub struct Runner {
     config_path: PathBuf,
@@ -24,7 +31,9 @@ impl Runner {
     ) -> Self {
         Self {
             config_path,
-            compile_path,
+            compile_path: compile_path
+                .canonicalize()
+                .expect("Failed to get absolute compile path."),
             minecraft_path,
             builds,
             profile,
@@ -32,9 +41,9 @@ impl Runner {
     }
 
     pub fn start_standard(self) -> anyhow::Result<()> {
-        let compilers = self.create_compilers()?;
+        let mut compilers = self.create_compilers()?;
 
-        compilers.par_iter().for_each(|compiler| compiler.run());
+        compilers.par_iter_mut().for_each(PackCompiler::run);
 
         Ok(())
     }
@@ -75,7 +84,7 @@ impl Runner {
     fn listener_run(&self) {
         self.create_compilers()
             .unwrap()
-            .par_iter()
+            .par_iter_mut()
             .for_each(PackCompiler::run)
     }
 
@@ -83,6 +92,12 @@ impl Runner {
         let config_raw =
             std::fs::read_to_string(&self.config_path).context("Config read error.")?;
         let config = toml::from_str::<PackConfig>(&config_raw).context("Config parse error.")?;
+
+        let mut asset_tracker = AssetTracker::default();
+
+        asset_tracker.search_bundle_files(&Path::new("./src").canonicalize()?)?;
+
+        let asset_tracker = Arc::from(asset_tracker);
 
         let mut compilers = Vec::with_capacity(self.builds.len());
         let profile = config.find_profile(&self.profile);
@@ -93,6 +108,7 @@ impl Runner {
                 &self.minecraft_path,
                 profile.clone(),
                 &build,
+                asset_tracker.clone(),
             );
             compilers.push(compiler);
         }

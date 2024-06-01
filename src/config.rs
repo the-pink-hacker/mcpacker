@@ -8,7 +8,9 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use self::export::{ExportOutputType, ExportRelocation, JsonExportType, PackCompiler};
+use crate::compile::{tracking::AssetTracker, PackCompiler};
+
+use self::export::{ExportOutputType, ExportRelocation, JsonExportType};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
@@ -64,11 +66,11 @@ impl Default for FormatType {
 #[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct PackMetaConfig {
-    name: Option<String>,
-    suffix: Option<String>,
-    description: Option<String>,
-    format: Option<FormatType>,
-    icon: Option<PathBuf>,
+    pub name: Option<String>,
+    pub suffix: Option<String>,
+    pub description: Option<String>,
+    pub format: Option<FormatType>,
+    pub icon: Option<PathBuf>,
 }
 
 impl PackMetaConfig {
@@ -123,7 +125,7 @@ pub struct ProfileConfig {
 #[serde(default)]
 pub struct CollectionConfig {
     pub pack: PackMetaConfig,
-    pub bundles: Vec<PathBuf>,
+    pub bundles: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -147,6 +149,7 @@ impl PackConfig {
         minecraft_path: &PathBuf,
         profile: Arc<ProfileConfig>,
         build: &str,
+        tracker: Arc<AssetTracker>,
     ) -> PackCompiler {
         let build = self.build.get(build).expect("Couldn't find build.");
         let pack =
@@ -158,6 +161,7 @@ impl PackConfig {
             pack,
             profile,
             build.clone(),
+            tracker,
         )
     }
 }

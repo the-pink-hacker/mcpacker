@@ -8,7 +8,7 @@ use serde_with::skip_serializing_none;
 #[serde(rename_all = "snake_case")]
 pub enum Blockstate {
     Variants(IndexMap<String, ModelState>),
-    Multipart { multipart: Vec<BlockstateMultipart> },
+    Multipart(Vec<BlockstateMultipart>),
 }
 
 #[skip_serializing_none]
@@ -35,13 +35,27 @@ pub struct WeightedState {
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "UPPERCASE")]
 pub struct BlockstateMultipart {
-    when: IndexMap<String, StateValue>,
+    when: Option<MultipartCondition>,
     apply: ModelState,
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum MultipartCondition {
+    And {
+        #[serde(rename = "AND")]
+        and: Vec<IndexMap<String, StateValue>>,
+    },
+    Or {
+        #[serde(rename = "OR")]
+        or: Vec<IndexMap<String, StateValue>>,
+    },
+    Single(IndexMap<String, StateValue>),
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
 pub enum StateValue {
     Boolean(bool),
     Integer(u8),

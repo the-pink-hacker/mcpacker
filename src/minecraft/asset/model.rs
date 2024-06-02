@@ -95,9 +95,9 @@ pub struct ItemDisplayPositions {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ItemDisplay {
-    rotation: [f32; 3],
-    translation: [f32; 3],
-    scale: [f32; 3],
+    rotation: Option<[f32; 3]>,
+    translation: Option<[f32; 3]>,
+    scale: Option<[f32; 3]>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

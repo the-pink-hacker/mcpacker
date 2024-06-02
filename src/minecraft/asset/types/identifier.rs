@@ -14,6 +14,8 @@ const DEFAULT_NAMESPACE: &str = "minecraft";
 pub enum AssetType {
     Model,
     Blockstate,
+    Texture,
+    Atlas,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -56,6 +58,8 @@ impl Identifier {
             .map_or(None, |f| match f {
                 "models" => Some(AssetType::Model),
                 "blockstates" => Some(AssetType::Blockstate),
+                "textures" => Some(AssetType::Texture),
+                "atlases" => Some(AssetType::Atlas),
                 _ => None,
             })
             .with_context(|| {
@@ -182,6 +186,22 @@ mod tests {
         let result =
             Identifier::from_path(Path::new("minecraft/blockstates/block/sponge.json")).unwrap();
         assert_eq!((AssetType::Blockstate, id), result);
+    }
+
+    #[test]
+    fn from_path_minecraft_texture() {
+        let id = Identifier::minecraft("block/crafting_table_top");
+        let result =
+            Identifier::from_path(Path::new("minecraft/textures/block/crafting_table_top.png"))
+                .unwrap();
+        assert_eq!((AssetType::Texture, id), result);
+    }
+
+    #[test]
+    fn from_path_minecraft_atlas() {
+        let id = Identifier::minecraft("blocks");
+        let result = Identifier::from_path(Path::new("minecraft/atlases/blocks.json")).unwrap();
+        assert_eq!((AssetType::Atlas, id), result);
     }
 
     #[test]

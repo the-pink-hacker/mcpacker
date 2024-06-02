@@ -3,8 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::Context;
-
 use crate::minecraft::asset::{
     blockstate::Blockstate,
     model::Model,
@@ -20,14 +18,18 @@ pub struct AssetLibrary {
 }
 
 impl AssetLibrary {
-    pub fn load_asset(&mut self, asset_path: &Path, bundle_path: &Path) -> anyhow::Result<()> {
+    pub fn load_asset(
+        &mut self,
+        asset_path: &Path,
+        asset_path_absolute: &Path,
+    ) -> anyhow::Result<()> {
         let (asset_type, id) = Identifier::from_path(asset_path)?;
-        let path = bundle_path.join(asset_path);
-        println!("{}", path.display());
 
         match asset_type {
-            AssetType::Model => self.load_model(id, &path),
-            AssetType::Blockstate => self.load_blockstate(id, &path),
+            AssetType::Model => self.load_model(id, asset_path_absolute),
+            AssetType::Blockstate => self.load_blockstate(id, asset_path_absolute),
+            AssetType::Texture => Ok(()),
+            AssetType::Atlas => Ok(()),
         }
     }
 
@@ -56,13 +58,16 @@ impl PackCompiler {
         let tracked_files = self.tracker.condence(bundle_order)?;
 
         for file in tracked_files {
-            let mut file_parts = file.iter();
-            let bundle_path = self.bundles_path.join(file_parts.next().with_context(|| {
-                format!("Failed to parse bundle name from path: {}", file.display())
-            })?);
-            let asset_path = file_parts.collect::<PathBuf>();
+            let absolute_path = self.bundles_path.join(&file);
+            let asset_path = file.iter().skip(1).collect::<PathBuf>();
 
-            self.library.load_asset(&asset_path, &bundle_path)?;
+            if let Err(e) = self.library.load_asset(&asset_path, &absolute_path) {
+                println!(
+                    "[WARNING] Parse error at \"{}\":\n{}",
+                    absolute_path.display(),
+                    e
+                );
+            }
         }
 
         Ok(())

@@ -36,10 +36,7 @@ impl PackCompiler {
         self.setup_compile_path()?;
         self.compile_meta()?;
         self.compile_icon()?;
-
-        for bundle in &self.build.bundles {
-            self.compile_bundle(bundle)?;
-        }
+        self.write_asset_library()?;
 
         self.output()?;
         self.relocate()?;
@@ -74,32 +71,6 @@ impl PackCompiler {
                 .unwrap_or_else(|| PathBuf::from("./pack.png")),
             &self.compile_path.join(PACK_ICON_NAME),
         )?;
-        Ok(())
-    }
-
-    fn compile_bundle(&self, bundle: &str) -> anyhow::Result<()> {
-        let src_path = self.bundles_path.join(bundle);
-        let files = glob::glob(
-            src_path
-                .join("**")
-                .join("*")
-                .to_str()
-                .expect("Couldn't convert path to unicode."),
-        )
-        .unwrap()
-        .filter_map(Result::ok)
-        .filter(|f| f.is_file());
-
-        for file in files {
-            let file_absolute = file.canonicalize()?;
-            let relative_file = file_absolute.strip_prefix(&src_path.canonicalize()?)?;
-            let to = self.asset_path.join(relative_file);
-            let mut to_path = to.clone();
-            to_path.pop();
-            std::fs::create_dir_all(&to_path)?;
-            std::fs::copy(file, to)?;
-        }
-
         Ok(())
     }
 

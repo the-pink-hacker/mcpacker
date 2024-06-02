@@ -34,6 +34,7 @@ pub struct WeightedState {
     weight: Option<u8>,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct BlockstateMultipart {
     when: Option<MultipartCondition>,

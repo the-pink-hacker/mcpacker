@@ -1,8 +1,10 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use super::types::{identifier::Identifier, rotation::StateRotation};
 
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Model {
     parent: Option<Identifier>,
@@ -36,6 +38,7 @@ pub enum Direction {
     Down,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ModelElement {
     from: [f32; 3],
@@ -45,6 +48,7 @@ pub struct ModelElement {
     faces: Option<ElementFaces>,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ElementFaces {
     north: Option<ElementFace>,
@@ -55,6 +59,7 @@ pub struct ElementFaces {
     down: Option<ElementFace>,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ElementRotation {
     origin: [f32; 3],
@@ -71,6 +76,7 @@ pub enum Axis {
     Z,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ElementFace {
     uv: Option<[f32; 4]>,
@@ -81,6 +87,7 @@ pub struct ElementFace {
     tint_index: Option<i32>,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ItemDisplayPositions {
     thirdperson_righthand: Option<ItemDisplay>,
@@ -93,6 +100,7 @@ pub struct ItemDisplayPositions {
     fixed: Option<ItemDisplay>,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ItemDisplay {
     rotation: Option<[f32; 3]>,

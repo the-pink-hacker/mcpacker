@@ -73,6 +73,21 @@ impl Identifier {
 
         Ok((asset_type, Identifier::new(namespace, asset_path)))
     }
+
+    pub fn to_path(&self, asset_path: &PathBuf, asset_type: &AssetType) -> PathBuf {
+        let (folder, extension) = match asset_type {
+            AssetType::Model => ("models", "json"),
+            AssetType::Blockstate => ("blockstates", "json"),
+            AssetType::Texture => ("textures", "png"),
+            AssetType::Atlas => ("atlases", "json"),
+        };
+
+        asset_path
+            .join(&self.namespace)
+            .join(folder)
+            .join(&self.path)
+            .with_extension(extension)
+    }
 }
 
 impl FromStr for Identifier {

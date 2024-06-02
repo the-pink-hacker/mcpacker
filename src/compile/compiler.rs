@@ -68,7 +68,7 @@ impl PackCompiler {
                 .pack
                 .icon
                 .clone()
-                .unwrap_or_else(|| PathBuf::from("./pack.png")),
+                .unwrap_or_else(|| PathBuf::from(PACK_ICON_NAME)),
             &self.compile_path.join(PACK_ICON_NAME),
         )?;
         Ok(())

@@ -9,6 +9,7 @@ use crate::minecraft::asset::{
     atlas::Atlas,
     blockstate::Blockstate,
     model::Model,
+    texture::TextureMeta,
     types::identifier::{AssetType, Identifier},
 };
 
@@ -19,6 +20,8 @@ pub struct AssetLibrary {
     models: HashMap<Identifier, Model>,
     blockstates: HashMap<Identifier, Blockstate>,
     atlases: HashMap<Identifier, Atlas>,
+    textures: HashMap<Identifier, PathBuf>,
+    textures_meta: HashMap<Identifier, TextureMeta>,
 }
 
 impl AssetLibrary {
@@ -32,8 +35,12 @@ impl AssetLibrary {
         match asset_type {
             AssetType::Model => self.load_model(id, asset_path_absolute),
             AssetType::Blockstate => self.load_blockstate(id, asset_path_absolute),
-            AssetType::Texture => Ok(()),
+            AssetType::Texture => {
+                self.textures.insert(id, asset_path_absolute.to_owned());
+                Ok(())
+            }
             AssetType::Atlas => self.load_atlas(id, asset_path_absolute),
+            AssetType::TextureMeta => self.load_texture_meta(id, asset_path_absolute),
         }
     }
 
@@ -60,6 +67,15 @@ impl AssetLibrary {
         let parsed = serde_json::from_str(&raw)?;
 
         self.atlases.insert(id, parsed);
+
+        Ok(())
+    }
+
+    pub fn load_texture_meta(&mut self, id: Identifier, path: &Path) -> anyhow::Result<()> {
+        let raw = std::fs::read_to_string(path)?;
+        let parsed = serde_json::from_str(&raw)?;
+
+        self.textures_meta.insert(id, parsed);
 
         Ok(())
     }
@@ -99,6 +115,15 @@ impl PackCompiler {
             self.write_asset(id, atlas, &AssetType::Atlas)?;
         }
 
+        for (id, texture) in &self.library.textures {
+            self.copy_asset(id, texture, &AssetType::Texture)?;
+        }
+
+        for (id, texture_meta) in &self.library.textures_meta {
+            println!("{:#?}", texture_meta);
+            self.write_asset(id, texture_meta, &AssetType::TextureMeta)?;
+        }
+
         Ok(())
     }
 
@@ -118,6 +143,23 @@ impl PackCompiler {
 
         let mut output_file = File::create(output_file_path)?;
         output_file.write_all(output.as_bytes())?;
+
+        Ok(())
+    }
+
+    fn copy_asset(
+        &self,
+        id: &Identifier,
+        asset: &Path,
+        asset_type: &AssetType,
+    ) -> anyhow::Result<()> {
+        let output_file_path = id.to_path(&self.asset_path, asset_type);
+
+        let mut output_path = output_file_path.clone();
+        output_path.pop();
+        std::fs::create_dir_all(&output_path)?;
+
+        std::fs::copy(asset, output_file_path)?;
 
         Ok(())
     }

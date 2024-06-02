@@ -1,11 +1,10 @@
 use std::{
-    convert::Infallible,
     fmt,
     path::{Path, PathBuf},
     str::FromStr,
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use serde::{de::Visitor, Deserialize, Serialize};
 
 const DEFAULT_NAMESPACE: &str = "minecraft";
@@ -16,6 +15,7 @@ pub enum AssetType {
     Blockstate,
     Texture,
     Atlas,
+    TextureMeta,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -58,7 +58,13 @@ impl Identifier {
             .map_or(None, |f| match f {
                 "models" => Some(AssetType::Model),
                 "blockstates" => Some(AssetType::Blockstate),
-                "textures" => Some(AssetType::Texture),
+                "textures" => value.extension().map_or(None, |e| {
+                    match e.to_string_lossy().to_mut().clone().as_str() {
+                        "png" => Some(AssetType::Texture),
+                        "mcmeta" => Some(AssetType::TextureMeta),
+                        _ => None,
+                    }
+                }),
                 "atlases" => Some(AssetType::Atlas),
                 _ => None,
             })
@@ -69,7 +75,10 @@ impl Identifier {
                 )
             })?;
 
-        let asset_path = path_list.collect::<PathBuf>().with_extension("");
+        let asset_path = path_list
+            .collect::<PathBuf>()
+            .with_extension("")
+            .with_extension("");
 
         Ok((asset_type, Identifier::new(namespace, asset_path)))
     }
@@ -80,6 +89,7 @@ impl Identifier {
             AssetType::Blockstate => ("blockstates", "json"),
             AssetType::Texture => ("textures", "png"),
             AssetType::Atlas => ("atlases", "json"),
+            AssetType::TextureMeta => ("textures", "png.mcmeta"),
         };
 
         asset_path
@@ -91,9 +101,13 @@ impl Identifier {
 }
 
 impl FromStr for Identifier {
-    type Err = Infallible;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with('#') {
+            bail!("Can't parse identifier; variable detected.");
+        }
+
         let (namespace, path) = s.split_once(":").unwrap_or_else(|| (DEFAULT_NAMESPACE, s));
         Ok(Self::new(namespace, PathBuf::from(path)))
     }
@@ -210,6 +224,16 @@ mod tests {
             Identifier::from_path(Path::new("minecraft/textures/block/crafting_table_top.png"))
                 .unwrap();
         assert_eq!((AssetType::Texture, id), result);
+    }
+
+    #[test]
+    fn from_path_minecraft_texture_meta() {
+        let id = Identifier::minecraft("block/crafting_table_top");
+        let result = Identifier::from_path(Path::new(
+            "minecraft/textures/block/crafting_table_top.png.mcmeta",
+        ))
+        .unwrap();
+        assert_eq!((AssetType::TextureMeta, id), result);
     }
 
     #[test]

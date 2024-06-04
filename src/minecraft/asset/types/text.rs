@@ -5,6 +5,8 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+use self::formatting::FormattingCode;
+
 use super::identifier::Identifier;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,19 +19,17 @@ pub enum RawText {
 
 impl Display for RawText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let output = match self {
-            Self::Raw(text) => text,
+        match self {
+            Self::Raw(text) => f.write_str(text),
             Self::List(_) => unimplemented!(),
-            Self::Single(_) => unimplemented!(),
-        };
-
-        f.write_str(output)
+            Self::Single(text) => f.write_str(&text.to_string()),
+        }
     }
 }
 
 // TODO: Add interactivity fields.
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TextComponent {
     #[serde(flatten)]
     text: TextType,
@@ -43,10 +43,47 @@ pub struct TextComponent {
     extra: Option<Vec<RawText>>,
 }
 
+impl Display for TextComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut output = String::new();
+
+        if let Some(color) = &self.color {
+            output += &FormattingCode::from(color.clone()).to_string();
+        }
+
+        if self.obfuscated == Some(true) {
+            output += &FormattingCode::Obfuscated.to_string();
+        }
+
+        if self.bold == Some(true) {
+            output += &FormattingCode::Bold.to_string();
+        }
+
+        if self.strikethrough == Some(true) {
+            output += &FormattingCode::Strikethrough.to_string();
+        }
+
+        if self.underline == Some(true) {
+            output += &FormattingCode::Underline.to_string();
+        }
+
+        if self.italics == Some(true) {
+            output += &FormattingCode::Italic.to_string();
+        }
+
+        output += match &self.text {
+            TextType::Text { text } => text,
+            _ => unimplemented!(),
+        };
+
+        f.write_str(&output)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TextType {
-    Text,
+    Text { text: String },
     Translatable,
     Score,
     Selector,
@@ -54,8 +91,16 @@ pub enum TextType {
     NBT,
 }
 
+impl Default for TextType {
+    fn default() -> Self {
+        Self::Text {
+            text: Default::default(),
+        }
+    }
+}
+
 // TODO: Add hex color codes.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TextColor {
     Black,
@@ -84,6 +129,37 @@ mod tests {
     fn raw_to_string() {
         let expected = "test";
         let raw = RawText::Raw("test".to_string());
+        assert_eq!(expected, raw.to_string());
+    }
+
+    #[test]
+    fn raw_to_string_color() {
+        let expected = "\u{A7}ctest";
+        let raw = RawText::Single(TextComponent {
+            text: TextType::Text {
+                text: "test".to_string(),
+            },
+            color: Some(TextColor::Red),
+            ..Default::default()
+        });
+        assert_eq!(expected, raw.to_string());
+    }
+
+    #[test]
+    fn raw_to_string_formatting() {
+        let expected = "\u{A7}f\u{A7}k\u{A7}l\u{A7}m\u{A7}n\u{A7}otest";
+        let raw = RawText::Single(TextComponent {
+            text: TextType::Text {
+                text: "test".to_string(),
+            },
+            color: Some(TextColor::White),
+            italics: Some(true),
+            obfuscated: Some(true),
+            bold: Some(true),
+            strikethrough: Some(true),
+            underline: Some(true),
+            ..Default::default()
+        });
         assert_eq!(expected, raw.to_string());
     }
 }

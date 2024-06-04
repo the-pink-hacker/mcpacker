@@ -82,10 +82,10 @@ impl Runner {
     }
 
     fn listener_run(&self) {
-        self.create_compilers()
-            .unwrap()
-            .par_iter_mut()
-            .for_each(PackCompiler::run)
+        match self.create_compilers() {
+            Ok(mut compilers) => compilers.par_iter_mut().for_each(PackCompiler::run),
+            Err(e) => println!("Failed to create compilers: {}", e),
+        }
     }
 
     fn create_compilers(&self) -> anyhow::Result<Vec<PackCompiler>> {
@@ -100,7 +100,7 @@ impl Runner {
         let asset_tracker = Arc::from(asset_tracker);
 
         let mut compilers = Vec::with_capacity(self.builds.len());
-        let profile = config.find_profile(&self.profile);
+        let profile = config.find_profile(&self.profile)?;
 
         for build in &self.builds {
             let compiler = config.create_compiler(

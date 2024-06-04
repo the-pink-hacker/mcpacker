@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -143,10 +144,13 @@ pub struct PackConfig {
 }
 
 impl PackConfig {
-    pub fn find_profile(&self, profile: &str) -> Arc<ProfileConfig> {
-        let profile = self.profile.get(profile).expect("Couldn't find profile.");
+    pub fn find_profile(&self, profile: &str) -> anyhow::Result<Arc<ProfileConfig>> {
+        let profile = self
+            .profile
+            .get(profile)
+            .with_context(|| format!("Couldn't find profile: {}", profile))?;
 
-        Arc::new(profile.clone())
+        Ok(Arc::new(profile.clone()))
     }
 
     pub fn create_compiler(

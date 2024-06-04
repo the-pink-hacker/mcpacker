@@ -1,13 +1,15 @@
 use serde::{Deserialize, Serialize};
 use serde_json::ser::PrettyFormatter;
 
+use crate::minecraft::asset::types::text::RawText;
+
 use super::{FormatType, PackMetaConfig};
 
 #[derive(Debug, Serialize, Default)]
 pub struct PackMCMetaContents {
     pack_format: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
-    description: Option<String>,
+    description: Option<RawText>,
     #[serde(skip_serializing_if = "Option::is_none")]
     supported_formats: Option<FormatType>,
 }

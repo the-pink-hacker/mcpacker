@@ -18,7 +18,7 @@ pub enum AssetType {
     TextureMeta,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Identifier {
     namespace: String,
     path: PathBuf,

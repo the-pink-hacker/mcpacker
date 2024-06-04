@@ -88,8 +88,8 @@ impl PackCompiler {
         let expanded_pack_path = shellexpand::path::tilde(&self.resourcepack_path);
         let (expanded_source, expanded_link) = match self.profile.output_type {
             ExportOutputType::Zip => (
-                self.compile_path.with_extension("zip").canonicalize()?,
-                expanded_pack_path.with_extension("zip"),
+                Self::get_zip_path(&self.compile_path),
+                Self::get_zip_path(expanded_pack_path),
             ),
             ExportOutputType::Uncompressed => (
                 self.compile_path.canonicalize()?,
@@ -113,8 +113,14 @@ impl PackCompiler {
         }
     }
 
+    fn get_zip_path(path: impl Into<PathBuf>) -> PathBuf {
+        let mut path = path.into();
+        path.as_mut_os_string().push(".zip");
+        path
+    }
+
     fn zip(&self) -> anyhow::Result<()> {
-        let zip_path = self.compile_path.with_extension("zip");
+        let zip_path = Self::get_zip_path(&self.compile_path);
         let zip_file = File::create(zip_path)?;
         let mut zip = ZipWriter::new(zip_file);
         let zip_options =

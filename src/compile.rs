@@ -29,11 +29,7 @@ impl PackCompiler {
         build: CollectionConfig,
         tracker: Arc<AssetTracker>,
     ) -> Self {
-        let mut name = pack.name.clone().unwrap_or_default();
-
-        if let Some(suffix) = &pack.suffix {
-            name += suffix;
-        }
+        let name = pack.name.clone().unwrap_or_default().to_string();
 
         let compile_path = compile_path.join(&name);
 

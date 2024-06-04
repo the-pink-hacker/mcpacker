@@ -1,6 +1,6 @@
 pub mod formatting;
 
-use std::fmt::Display;
+use std::{fmt::Display, ops::AddAssign};
 
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -9,12 +9,27 @@ use self::formatting::FormattingCode;
 
 use super::identifier::Identifier;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RawText {
     Raw(String),
     List(Vec<RawText>),
     Single(TextComponent),
+}
+
+impl AddAssign for RawText {
+    fn add_assign(&mut self, rhs: Self) {
+        match self {
+            Self::Raw(_) | Self::Single(_) => *self = Self::List(vec![self.clone(), rhs]),
+            Self::List(list) => list.push(rhs),
+        }
+    }
+}
+
+impl Default for RawText {
+    fn default() -> Self {
+        Self::Raw(Default::default())
+    }
 }
 
 impl Display for RawText {
@@ -31,7 +46,7 @@ impl Display for RawText {
 
 // TODO: Add interactivity fields.
 #[skip_serializing_none]
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TextComponent {
     #[serde(flatten)]
     text: TextType,
@@ -88,7 +103,7 @@ impl Display for TextComponent {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TextType {
     Text { text: String },

@@ -8,7 +8,10 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::compile::{tracking::AssetTracker, PackCompiler};
+use crate::{
+    compile::{tracking::AssetTracker, PackCompiler},
+    minecraft::asset::types::text::RawText,
+};
 
 use self::export::{ExportOutputType, ExportRelocation, JsonExportType};
 
@@ -66,24 +69,24 @@ impl Default for FormatType {
 #[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct PackMetaConfig {
-    pub name: Option<String>,
-    pub suffix: Option<String>,
-    pub description: Option<String>,
+    pub name: Option<RawText>,
+    pub suffix: Option<RawText>,
+    pub description: Option<RawText>,
     pub format: Option<FormatType>,
     pub icon: Option<PathBuf>,
 }
 
 impl PackMetaConfig {
     pub fn condence(global: Self, build: Self, profile: Self) -> Self {
-        let mut suffix = String::new();
+        let mut name = Self::condence_option(global.name, build.name, profile.name);
 
-        Self::concat_suffix(profile.suffix, &mut suffix);
-        Self::concat_suffix(build.suffix, &mut suffix);
-        Self::concat_suffix(global.suffix, &mut suffix);
+        Self::append_name(&mut name, profile.suffix);
+        Self::append_name(&mut name, build.suffix);
+        Self::append_name(&mut name, global.suffix);
 
         Self {
-            name: Self::condence_option(global.name, build.name, profile.name),
-            suffix: Some(suffix),
+            name,
+            suffix: None,
             description: Self::condence_option(
                 global.description,
                 build.description,
@@ -94,10 +97,13 @@ impl PackMetaConfig {
         }
     }
 
-    fn concat_suffix(suffix: Option<String>, output: &mut String) {
-        if let Some(value) = suffix {
-            output.push(' ');
-            *output += &value;
+    fn append_name(name: &mut Option<RawText>, suffix: Option<RawText>) {
+        if let Some(name) = name {
+            if let Some(suffix) = suffix {
+                *name += suffix;
+            }
+        } else {
+            *name = suffix;
         }
     }
 

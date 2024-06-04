@@ -6,6 +6,7 @@ use std::{
     time::Instant,
 };
 
+use walkdir::WalkDir;
 use zip::{write::SimpleFileOptions, ZipWriter};
 
 use crate::config::export::{ExportOutputType, ExportRelocation, PackMCMeta};
@@ -126,22 +127,14 @@ impl PackCompiler {
         let zip_options =
             SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
-        let files_paths = glob::glob(
-            self.compile_path
-                .join("**")
-                .join("*")
-                .to_str()
-                .expect("Couldn't convert path to unicode."),
-        )
-        .unwrap()
-        .filter_map(Result::ok)
-        .filter(|f| f.is_file())
-        .collect::<Vec<_>>();
-
-        for file_path in &files_paths {
-            let file = File::open(file_path)?;
-            let absolute_path = file_path.canonicalize()?;
-            let file_zip_path = absolute_path
+        for file_path in WalkDir::new(&self.compile_path)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|f| f.path().is_file())
+        {
+            let file_path = file_path.path().canonicalize()?;
+            let file = File::open(&file_path)?;
+            let file_zip_path = file_path
                 .strip_prefix(self.compile_path.canonicalize()?)?
                 .to_str()
                 .unwrap();

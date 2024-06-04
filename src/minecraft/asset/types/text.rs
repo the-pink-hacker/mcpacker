@@ -21,7 +21,9 @@ impl Display for RawText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Raw(text) => f.write_str(text),
-            Self::List(_) => unimplemented!(),
+            Self::List(texts) => {
+                f.write_str(&texts.iter().map(RawText::to_string).collect::<String>())
+            }
             Self::Single(text) => f.write_str(&text.to_string()),
         }
     }
@@ -182,6 +184,17 @@ mod tests {
             ]),
             ..Default::default()
         });
+        assert_eq!(expected, raw.to_string());
+    }
+
+    #[test]
+    fn raw_to_string_list() {
+        let expected = "one two three";
+        let raw = RawText::List(vec![
+            RawText::Raw("one".to_string()),
+            RawText::Raw(" two".to_string()),
+            RawText::Raw(" three".to_string()),
+        ]);
         assert_eq!(expected, raw.to_string());
     }
 }

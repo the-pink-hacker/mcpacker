@@ -76,6 +76,12 @@ impl Display for TextComponent {
             _ => unimplemented!(),
         };
 
+        if let Some(extra) = &self.extra {
+            for text in extra {
+                output += &text.to_string();
+            }
+        }
+
         f.write_str(&output)
     }
 }
@@ -158,6 +164,22 @@ mod tests {
             bold: Some(true),
             strikethrough: Some(true),
             underline: Some(true),
+            ..Default::default()
+        });
+        assert_eq!(expected, raw.to_string());
+    }
+
+    #[test]
+    fn raw_to_string_extra() {
+        let expected = "one two three";
+        let raw = RawText::Single(TextComponent {
+            text: TextType::Text {
+                text: "one".to_string(),
+            },
+            extra: Some(vec![
+                RawText::Raw(" two".to_string()),
+                RawText::Raw(" three".to_string()),
+            ]),
             ..Default::default()
         });
         assert_eq!(expected, raw.to_string());

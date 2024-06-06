@@ -2,7 +2,11 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::types::{identifier::Identifier, rotation::StateRotation};
+use super::types::{
+    identifier::Identifier,
+    rotation::StateRotation,
+    vec::{Vec3, Vec4},
+};
 
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
@@ -41,8 +45,8 @@ pub enum Direction {
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ModelElement {
-    from: [f32; 3],
-    to: [f32; 3],
+    from: Vec3,
+    to: Vec3,
     rotation: Option<ElementRotation>,
     shade: Option<bool>,
     faces: Option<ElementFaces>,
@@ -62,7 +66,7 @@ pub struct ElementFaces {
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ElementRotation {
-    origin: [f32; 3],
+    origin: Vec3,
     axis: Axis,
     angle: f32,
     rescale: Option<bool>,
@@ -79,7 +83,7 @@ pub enum Axis {
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ElementFace {
-    uv: Option<[f32; 4]>,
+    uv: Option<Vec4>,
     texture: VariableIdentifier,
     cullface: Option<Direction>,
     rotation: Option<StateRotation>,
@@ -103,9 +107,9 @@ pub struct ItemDisplayPositions {
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ItemDisplay {
-    rotation: Option<[f32; 3]>,
-    translation: Option<[f32; 3]>,
-    scale: Option<[f32; 3]>,
+    rotation: Option<Vec3>,
+    translation: Option<Vec3>,
+    scale: Option<Vec3>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

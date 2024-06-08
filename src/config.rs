@@ -75,6 +75,7 @@ pub struct PackMetaConfig {
     pub description: Option<RawText>,
     pub format: Option<FormatType>,
     pub icon: Option<PathBuf>,
+    pub license: Option<PathBuf>,
 }
 
 impl PackMetaConfig {
@@ -95,6 +96,7 @@ impl PackMetaConfig {
             ),
             format: Self::condence_option(global.format, build.format, profile.format),
             icon: Self::condence_option(global.icon, build.icon, profile.icon),
+            license: Self::condence_option(global.license, build.license, profile.license),
         }
     }
 

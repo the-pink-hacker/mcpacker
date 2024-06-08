@@ -37,6 +37,7 @@ impl PackCompiler {
         self.setup_compile_path()?;
         self.compile_meta()?;
         self.compile_icon()?;
+        self.compile_license()?;
         self.write_asset_library()?;
 
         self.output()?;
@@ -64,14 +65,17 @@ impl PackCompiler {
     }
 
     fn compile_icon(&self) -> std::io::Result<()> {
-        std::fs::copy(
-            &self
-                .pack
-                .icon
-                .clone()
-                .unwrap_or_else(|| PathBuf::from(PACK_ICON_NAME)),
-            &self.compile_path.join(PACK_ICON_NAME),
-        )?;
+        if let Some(icon) = &self.pack.icon {
+            std::fs::copy(icon, &self.compile_path.join(PACK_ICON_NAME))?;
+        }
+        Ok(())
+    }
+
+    fn compile_license(&self) -> std::io::Result<()> {
+        if let Some(license) = &self.pack.license {
+            let file_name = license.file_name().unwrap_or_default();
+            std::fs::copy(license, &self.compile_path.join(file_name))?;
+        }
         Ok(())
     }
 

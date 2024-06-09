@@ -9,7 +9,13 @@ use std::{
 use walkdir::WalkDir;
 use zip::{write::SimpleFileOptions, ZipWriter};
 
-use crate::config::export::{ExportOutputType, ExportRelocation, PackMCMeta};
+use crate::{
+    config::{
+        export::{ExportOutputType, ExportRelocation, PackMCMeta},
+        RedirectFile,
+    },
+    minecraft::asset::types::identifier::AssetType,
+};
 
 use super::PackCompiler;
 
@@ -34,6 +40,8 @@ impl PackCompiler {
     fn run_failable(&mut self) -> anyhow::Result<()> {
         self.populate_asset_library()?;
 
+        self.process_redirects()?;
+
         self.setup_compile_path()?;
         self.compile_meta()?;
         self.compile_icon()?;
@@ -42,6 +50,30 @@ impl PackCompiler {
 
         self.output()?;
         self.relocate()?;
+
+        Ok(())
+    }
+
+    fn process_redirects(&mut self) -> anyhow::Result<()> {
+        for redirect_path in &self.build.redirects {
+            //println!("{}", self.bundles_path.join("redi"));
+            let raw = std::fs::read_to_string(
+                self.bundles_path
+                    .join("redirects")
+                    .join(redirect_path)
+                    .with_extension("toml"),
+            )?;
+            let redirect = toml::from_str::<RedirectFile>(&raw)?.redirect;
+
+            match redirect.asset_type {
+                AssetType::Texture => {
+                    for model in self.library.models.values_mut() {
+                        model.apply_texture_redirect(&redirect);
+                    }
+                }
+                _ => unimplemented!("Asset type not supported."),
+            }
+        }
 
         Ok(())
     }

@@ -6,6 +6,7 @@ use self::{library::AssetLibrary, tracking::AssetTracker};
 
 pub mod compiler;
 pub mod library;
+pub mod redirect;
 pub mod tracking;
 
 pub struct PackCompiler {

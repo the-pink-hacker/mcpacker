@@ -9,19 +9,24 @@ use serde::{de::Visitor, Deserialize, Serialize};
 
 const DEFAULT_NAMESPACE: &str = "minecraft";
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum AssetType {
     Model,
     Blockstate,
     Texture,
     Atlas,
     TextureMeta,
+    Sound,
+    Particle,
+    Text,
+    Language,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Identifier {
-    namespace: String,
-    path: PathBuf,
+    pub namespace: String,
+    pub path: PathBuf,
 }
 
 impl Identifier {
@@ -90,6 +95,10 @@ impl Identifier {
             AssetType::Texture => ("textures", "png"),
             AssetType::Atlas => ("atlases", "json"),
             AssetType::TextureMeta => ("textures", "png.mcmeta"),
+            AssetType::Sound => ("sounds", "ogg"),
+            AssetType::Text => ("texts", "txt"),
+            AssetType::Particle => ("particles", "json"),
+            AssetType::Language => ("lang", "json"),
         };
 
         asset_path

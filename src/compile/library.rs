@@ -17,11 +17,11 @@ use super::PackCompiler;
 
 #[derive(Debug, Default)]
 pub struct AssetLibrary {
-    models: HashMap<Identifier, Model>,
-    blockstates: HashMap<Identifier, Blockstate>,
-    atlases: HashMap<Identifier, Atlas>,
-    textures: HashMap<Identifier, PathBuf>,
-    textures_meta: HashMap<Identifier, TextureMeta>,
+    pub models: HashMap<Identifier, Model>,
+    pub blockstates: HashMap<Identifier, Blockstate>,
+    pub atlases: HashMap<Identifier, Atlas>,
+    pub textures: HashMap<Identifier, PathBuf>,
+    pub textures_meta: HashMap<Identifier, TextureMeta>,
 }
 
 impl AssetLibrary {
@@ -41,6 +41,7 @@ impl AssetLibrary {
             }
             AssetType::Atlas => self.load_atlas(id, asset_path_absolute),
             AssetType::TextureMeta => self.load_texture_meta(id, asset_path_absolute),
+            _ => unimplemented!("Asset type unsupported"),
         }
     }
 

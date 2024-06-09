@@ -13,7 +13,7 @@ pub enum Subcommands {
         builds: Vec<String>,
 
         /// Sets up a server to watch for file changes.
-        #[arg(long)]
+        #[arg(long, short)]
         listen: bool,
     },
 }

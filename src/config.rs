@@ -10,7 +10,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    compile::{tracking::AssetTracker, PackCompiler},
+    compile::{redirect::Redirect, tracking::AssetTracker, PackCompiler},
     minecraft::asset::types::text::RawText,
 };
 
@@ -134,7 +134,15 @@ pub struct ProfileConfig {
 #[serde(default)]
 pub struct CollectionConfig {
     pub pack: PackMetaConfig,
+    #[serde(default)]
     pub bundles: Vec<String>,
+    #[serde(default)]
+    pub redirects: Vec<PathBuf>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct RedirectFile {
+    pub redirect: Redirect,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]

@@ -11,14 +11,14 @@ use super::types::{
 #[skip_serializing_none]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Model {
-    parent: Option<Identifier>,
+    pub parent: Option<Identifier>,
     #[serde(rename = "ambient_occlusion")]
-    ambient_occlusion: Option<bool>,
-    display: Option<ItemDisplayPositions>,
-    textures: Option<IndexMap<String, IdentifierOrVariable>>,
-    elements: Option<Vec<ModelElement>>,
-    gui_light: Option<GuiLightDirection>,
-    overrides: Option<Vec<ItemModelOverride>>,
+    pub ambient_occlusion: Option<bool>,
+    pub display: Option<ItemDisplayPositions>,
+    pub textures: Option<IndexMap<String, IdentifierOrVariable>>,
+    pub elements: Option<Vec<ModelElement>>,
+    pub gui_light: Option<GuiLightDirection>,
+    pub overrides: Option<Vec<ItemModelOverride>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

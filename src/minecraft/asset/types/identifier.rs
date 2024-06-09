@@ -107,6 +107,10 @@ impl Identifier {
             .join(&self.path)
             .with_extension(extension)
     }
+
+    pub fn is_minecraft(&self) -> bool {
+        self.namespace == DEFAULT_NAMESPACE
+    }
 }
 
 impl FromStr for Identifier {
@@ -130,11 +134,12 @@ impl From<Identifier> for String {
 
 impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&format!(
-            "{}:{}",
-            self.namespace,
-            self.path.to_string_lossy()
-        ))
+        let output = if self.is_minecraft() {
+            self.path.to_string_lossy().to_string()
+        } else {
+            format!("{}:{}", self.namespace, self.path.to_string_lossy())
+        };
+        f.write_str(&output)
     }
 }
 
@@ -201,7 +206,7 @@ mod tests {
     #[test]
     fn identifier_to_string_minecraft() {
         let identifier = Identifier::minecraft("block/dirt");
-        assert_eq!("minecraft:block/dirt", String::from(identifier));
+        assert_eq!("block/dirt", String::from(identifier));
     }
 
     #[test]

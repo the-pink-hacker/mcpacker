@@ -40,14 +40,14 @@ impl AssetTracker {
         Ok(())
     }
 
-    pub fn condence(&self, bundle_order: &Vec<String>) -> anyhow::Result<Vec<PathBuf>> {
+    pub fn condence(&self, bundle_order: &Vec<PathBuf>) -> anyhow::Result<Vec<PathBuf>> {
         let mut map = HashMap::new();
 
         for bundle in bundle_order {
             let paths = self
                 .bundles
-                .get(bundle)
-                .with_context(|| format!("Failed to find tracked bundle: {}", bundle))?;
+                .get(bundle.to_string_lossy().to_mut())
+                .with_context(|| format!("Failed to find tracked bundle: {}", bundle.display()))?;
 
             for path in paths {
                 map.insert(path, bundle.clone());
@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn condence() {
-        let order = vec!["bundle1".to_string(), "bundle2".to_string()];
+        let order = vec![PathBuf::from("bundle1"), PathBuf::from("bundle2")];
 
         let asset_tracker = AssetTracker {
             bundles: HashMap::from([

@@ -19,7 +19,6 @@ fn main() -> anyhow::Result<()> {
         } => {
             let runner = Runner::new(
                 args.config,
-                args.compile,
                 args.minecraft,
                 builds.to_vec(),
                 profile.clone(),

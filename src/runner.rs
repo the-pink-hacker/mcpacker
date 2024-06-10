@@ -14,8 +14,7 @@ use crate::{
 };
 
 pub struct Runner {
-    config_path: PathBuf,
-    compile_path: PathBuf,
+    config: PathBuf,
     minecraft_path: PathBuf,
     builds: Vec<String>,
     profile: String,
@@ -23,17 +22,13 @@ pub struct Runner {
 
 impl Runner {
     pub fn new(
-        config_path: PathBuf,
-        compile_path: PathBuf,
+        config: PathBuf,
         minecraft_path: PathBuf,
         builds: Vec<String>,
         profile: String,
     ) -> Self {
         Self {
-            config_path,
-            compile_path: compile_path
-                .canonicalize()
-                .expect("Failed to get absolute compile path."),
+            config,
             minecraft_path,
             builds,
             profile,
@@ -53,9 +48,9 @@ impl Runner {
 
         let watcher_config = notify::Config::default().with_poll_interval(Duration::from_secs(2));
 
-        let config_path = self.config_path.clone();
+        let config_path = self.config.clone();
         let source_path = self
-            .config_path
+            .config
             .parent()
             .expect("Coudln't get parent folder of config.")
             .join("src");
@@ -89,8 +84,7 @@ impl Runner {
     }
 
     fn create_compilers(&self) -> anyhow::Result<Vec<PackCompiler>> {
-        let config_raw =
-            std::fs::read_to_string(&self.config_path).context("Config read error.")?;
+        let config_raw = std::fs::read_to_string(&self.config).context("Config read error.")?;
         let config = toml::from_str::<PackConfig>(&config_raw).context("Config parse error.")?;
 
         let mut asset_tracker = AssetTracker::default();
@@ -100,16 +94,24 @@ impl Runner {
         let asset_tracker = Arc::from(asset_tracker);
 
         let mut compilers = Vec::with_capacity(self.builds.len());
-        let profile = config.find_profile(&self.profile)?;
+        let profile = config.get_profile(&self.profile)?;
 
-        for build in &self.builds {
-            let compiler = config.create_compiler(
-                &self.compile_path,
-                &self.minecraft_path,
+        for build_name in &self.builds {
+            let build = config.get_build(build_name)?.clone();
+            let pack = config.condence_packs(&build.pack, &profile.pack);
+            let compiler = PackCompiler::new(
+                self.config
+                    .parent()
+                    .with_context(|| {
+                        format!("Failed to get project path for build: {}", build_name)
+                    })?
+                    .to_owned(),
+                self.minecraft_path.clone(),
+                pack,
                 profile.clone(),
-                &build,
+                build,
                 asset_tracker.clone(),
-            );
+            )?;
             compilers.push(compiler);
         }
 

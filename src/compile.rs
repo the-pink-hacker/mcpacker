@@ -1,6 +1,11 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::config::{CollectionConfig, PackMetaConfig, ProfileConfig};
+use anyhow::Context;
+
+use crate::{
+    config::{CollectionConfig, PackMetaConfig, ProfileConfig},
+    minecraft::asset::types::text::RawText,
+};
 
 use self::{library::AssetLibrary, tracking::AssetTracker};
 
@@ -11,41 +16,49 @@ pub mod tracking;
 
 pub struct PackCompiler {
     compile_path: PathBuf,
-    asset_path: PathBuf,
     bundles_path: PathBuf,
+    project_path: PathBuf,
     resourcepack_path: PathBuf,
     pack: PackMetaConfig,
     profile: Arc<ProfileConfig>,
-    build: CollectionConfig,
+    bundles: Vec<PathBuf>,
+    redirects: Vec<PathBuf>,
     library: AssetLibrary,
     tracker: Arc<AssetTracker>,
 }
 
 impl PackCompiler {
-    pub fn from(
-        compile_path: PathBuf,
+    pub fn new(
+        project_path: PathBuf,
         minecraft_path: PathBuf,
         pack: PackMetaConfig,
         profile: Arc<ProfileConfig>,
         build: CollectionConfig,
         tracker: Arc<AssetTracker>,
-    ) -> Self {
-        let name = pack.name.clone().unwrap_or_default().to_string();
+    ) -> anyhow::Result<Self> {
+        let name = pack
+            .name
+            .clone()
+            .filter(RawText::is_empty)
+            .with_context(|| "pack name is empty")?
+            .to_string();
 
-        let compile_path = compile_path.join(&name);
+        let compile_path = project_path.join("build").join(&name);
 
-        Self {
+        Ok(Self {
             pack,
             profile,
-            build,
-            bundles_path: PathBuf::from("./src")
+            bundles_path: project_path
+                .join("src")
                 .canonicalize()
                 .expect("Failed to get absolute bundle path."),
-            asset_path: compile_path.join("assets"),
             resourcepack_path: minecraft_path.join("resourcepacks").join(name),
             compile_path,
             library: Default::default(),
             tracker,
-        }
+            redirects: build.redirects,
+            bundles: build.bundles,
+            project_path,
+        })
     }
 }

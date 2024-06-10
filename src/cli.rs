@@ -30,10 +30,6 @@ pub struct Args {
     #[arg(short, long, value_name = "PATH", default_value = PathBuf::from("~/.minecraft/").into_os_string())]
     pub minecraft: PathBuf,
 
-    /// The path where packs are compiled.
-    #[arg(long, value_name = "PATH", default_value = PathBuf::from("./build/").into_os_string())]
-    pub compile: PathBuf,
-
     #[command(subcommand)]
     pub commands: Subcommands,
 }

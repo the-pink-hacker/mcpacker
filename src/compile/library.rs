@@ -84,8 +84,7 @@ impl AssetLibrary {
 
 impl PackCompiler {
     pub fn populate_asset_library(&mut self) -> anyhow::Result<()> {
-        let bundle_order = &self.build.bundles;
-        let tracked_files = self.tracker.condence(bundle_order)?;
+        let tracked_files = self.tracker.condence(&self.bundles)?;
 
         for file in tracked_files {
             let absolute_path = self.bundles_path.join(&file);
@@ -134,7 +133,7 @@ impl PackCompiler {
         asset: impl serde::Serialize,
         asset_type: &AssetType,
     ) -> anyhow::Result<()> {
-        let output_file_path = id.to_path(&self.asset_path, asset_type);
+        let output_file_path = id.to_path(&self.compile_path.join("assets"), asset_type);
 
         let mut output_path = output_file_path.clone();
         output_path.pop();
@@ -154,7 +153,7 @@ impl PackCompiler {
         asset: &Path,
         asset_type: &AssetType,
     ) -> anyhow::Result<()> {
-        let output_file_path = id.to_path(&self.asset_path, asset_type);
+        let output_file_path = id.to_path(&self.compile_path.join("assets"), asset_type);
 
         let mut output_path = output_file_path.clone();
         output_path.pop();

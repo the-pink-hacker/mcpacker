@@ -55,7 +55,7 @@ impl PackCompiler {
     }
 
     fn process_redirects(&mut self) -> anyhow::Result<()> {
-        for redirect_path in &self.build.redirects {
+        for redirect_path in &self.redirects {
             //println!("{}", self.bundles_path.join("redi"));
             let raw = std::fs::read_to_string(
                 self.bundles_path
@@ -98,7 +98,10 @@ impl PackCompiler {
 
     fn compile_icon(&self) -> std::io::Result<()> {
         if let Some(icon) = &self.pack.icon {
-            std::fs::copy(icon, &self.compile_path.join(PACK_ICON_NAME))?;
+            std::fs::copy(
+                self.project_path.join(icon),
+                &self.compile_path.join(PACK_ICON_NAME),
+            )?;
         }
         Ok(())
     }
@@ -106,7 +109,10 @@ impl PackCompiler {
     fn compile_license(&self) -> std::io::Result<()> {
         if let Some(license) = &self.pack.license {
             let file_name = license.file_name().unwrap_or_default();
-            std::fs::copy(license, &self.compile_path.join(file_name))?;
+            std::fs::copy(
+                self.project_path.join(license),
+                &self.compile_path.join(file_name),
+            )?;
         }
         Ok(())
     }

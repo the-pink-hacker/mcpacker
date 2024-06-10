@@ -9,10 +9,7 @@ use std::{
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compile::{redirect::Redirect, tracking::AssetTracker, PackCompiler},
-    minecraft::asset::types::text::RawText,
-};
+use crate::{compile::redirect::Redirect, minecraft::asset::types::text::RawText};
 
 use self::export::{ExportOutputType, ExportRelocation, JsonExportType};
 
@@ -135,7 +132,7 @@ pub struct ProfileConfig {
 pub struct CollectionConfig {
     pub pack: PackMetaConfig,
     #[serde(default)]
-    pub bundles: Vec<String>,
+    pub bundles: Vec<PathBuf>,
     #[serde(default)]
     pub redirects: Vec<PathBuf>,
 }
@@ -154,34 +151,24 @@ pub struct PackConfig {
 }
 
 impl PackConfig {
-    pub fn find_profile(&self, profile: &str) -> anyhow::Result<Arc<ProfileConfig>> {
-        let profile = self
-            .profile
+    pub fn get_profile(&self, profile: &str) -> anyhow::Result<Arc<ProfileConfig>> {
+        self.profile
             .get(profile)
-            .with_context(|| format!("Couldn't find profile: {}", profile))?;
-
-        Ok(Arc::new(profile.clone()))
+            .map(|p| Arc::new(p.clone()))
+            .with_context(|| format!("Couldn't find profile: {}", profile))
     }
 
-    pub fn create_compiler(
-        &self,
-        compile_path: &PathBuf,
-        minecraft_path: &PathBuf,
-        profile: Arc<ProfileConfig>,
-        build: &str,
-        tracker: Arc<AssetTracker>,
-    ) -> PackCompiler {
-        let build = self.build.get(build).expect("Couldn't find build.");
-        let pack =
-            PackMetaConfig::condence(self.pack.clone(), build.pack.clone(), profile.pack.clone());
+    pub fn get_build<'a>(&'a self, build: &str) -> anyhow::Result<&'a CollectionConfig> {
+        self.build
+            .get(build)
+            .with_context(|| format!("Couldn't find build: {}", build))
+    }
 
-        PackCompiler::from(
-            compile_path.clone(),
-            minecraft_path.clone(),
-            pack,
-            profile,
-            build.clone(),
-            tracker,
-        )
+    pub fn condence_packs(
+        &self,
+        build: &PackMetaConfig,
+        profile: &PackMetaConfig,
+    ) -> PackMetaConfig {
+        PackMetaConfig::condence(self.pack.clone(), build.clone(), profile.clone())
     }
 }

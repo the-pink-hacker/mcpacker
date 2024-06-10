@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::Write,
     io::{self, Read},
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::Instant,
 };
 
@@ -22,7 +22,7 @@ use super::PackCompiler;
 const PACK_META_NAME: &str = "pack.mcmeta";
 const PACK_ICON_NAME: &str = "pack.png";
 
-impl PackCompiler {
+impl<'a> PackCompiler<'a> {
     pub fn run(&mut self) {
         println!("Compiling...");
 
@@ -35,6 +35,16 @@ impl PackCompiler {
             }
             Err(e) => println!("Build error: {:}", e),
         }
+    }
+
+    pub fn get_bundle_path<P: AsRef<Path>>(&self, bundle: P) -> anyhow::Result<PathBuf> {
+        self.project_sanitizer
+            .sanitize(self.bundles_path.join(bundle))
+    }
+
+    pub fn get_redirect_path<P: AsRef<Path>>(&self, redirect: P) -> anyhow::Result<PathBuf> {
+        self.project_sanitizer
+            .sanitize(self.redirects_path.join(redirect).with_extension("toml"))
     }
 
     fn run_failable(&mut self) -> anyhow::Result<()> {
@@ -57,12 +67,7 @@ impl PackCompiler {
     fn process_redirects(&mut self) -> anyhow::Result<()> {
         for redirect_path in &self.redirects {
             //println!("{}", self.bundles_path.join("redi"));
-            let raw = std::fs::read_to_string(
-                self.bundles_path
-                    .join("redirects")
-                    .join(redirect_path)
-                    .with_extension("toml"),
-            )?;
+            let raw = std::fs::read_to_string(self.get_redirect_path(redirect_path)?)?;
             let redirect = toml::from_str::<RedirectFile>(&raw)?.redirect;
 
             match redirect.asset_type {
@@ -96,21 +101,21 @@ impl PackCompiler {
         Ok(())
     }
 
-    fn compile_icon(&self) -> std::io::Result<()> {
+    fn compile_icon(&self) -> anyhow::Result<()> {
         if let Some(icon) = &self.pack.icon {
             std::fs::copy(
-                self.project_path.join(icon),
+                self.project_sanitizer.join(icon)?,
                 &self.compile_path.join(PACK_ICON_NAME),
             )?;
         }
         Ok(())
     }
 
-    fn compile_license(&self) -> std::io::Result<()> {
+    fn compile_license(&self) -> anyhow::Result<()> {
         if let Some(license) = &self.pack.license {
             let file_name = license.file_name().unwrap_or_default();
             std::fs::copy(
-                self.project_path.join(license),
+                self.project_sanitizer.join(license)?,
                 &self.compile_path.join(file_name),
             )?;
         }

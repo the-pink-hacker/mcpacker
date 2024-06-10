@@ -3,6 +3,7 @@ pub mod compile;
 pub mod config;
 pub mod minecraft;
 pub mod runner;
+pub mod sanitize;
 
 use clap::Parser;
 use cli::Args;
@@ -22,7 +23,7 @@ fn main() -> anyhow::Result<()> {
                 args.minecraft,
                 builds.to_vec(),
                 profile.clone(),
-            );
+            )?;
 
             if *listen {
                 runner.start_listener()?;

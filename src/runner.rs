@@ -1,8 +1,4 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Duration,
-};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use notify::{INotifyWatcher, RecursiveMode, Watcher};
@@ -11,9 +7,11 @@ use rayon::prelude::*;
 use crate::{
     compile::{tracking::AssetTracker, PackCompiler},
     config::PackConfig,
+    sanitize::PathSanitizer,
 };
 
 pub struct Runner {
+    project_sanitizer: PathSanitizer,
     config: PathBuf,
     minecraft_path: PathBuf,
     builds: Vec<String>,
@@ -26,13 +24,18 @@ impl Runner {
         minecraft_path: PathBuf,
         builds: Vec<String>,
         profile: String,
-    ) -> Self {
-        Self {
+    ) -> anyhow::Result<Self> {
+        let project_sanitizer = config
+            .parent()
+            .with_context(|| format!("Failed to get project path at: {}", config.display()))?
+            .try_into()?;
+        Ok(Self {
+            project_sanitizer,
             config,
             minecraft_path,
             builds,
             profile,
-        }
+        })
     }
 
     pub fn start_standard(self) -> anyhow::Result<()> {
@@ -49,11 +52,7 @@ impl Runner {
         let watcher_config = notify::Config::default().with_poll_interval(Duration::from_secs(2));
 
         let config_path = self.config.clone();
-        let source_path = self
-            .config
-            .parent()
-            .expect("Coudln't get parent folder of config.")
-            .join("src");
+        let source_path = self.project_sanitizer.join("src")?;
 
         let mut watcher: INotifyWatcher = notify::Watcher::new(
             move |res: Result<notify::event::Event, _>| match res {
@@ -89,7 +88,13 @@ impl Runner {
 
         let mut asset_tracker = AssetTracker::default();
 
-        asset_tracker.search_bundle_files(&Path::new("./src").canonicalize()?)?;
+        asset_tracker.search_bundle_files(
+            &self
+                .project_sanitizer
+                .restricted_path
+                .join("src")
+                .join("bundles"),
+        )?;
 
         let asset_tracker = Arc::from(asset_tracker);
 
@@ -100,12 +105,7 @@ impl Runner {
             let build = config.get_build(build_name)?.clone();
             let pack = config.condence_packs(&build.pack, &profile.pack);
             let compiler = PackCompiler::new(
-                self.config
-                    .parent()
-                    .with_context(|| {
-                        format!("Failed to get project path for build: {}", build_name)
-                    })?
-                    .to_owned(),
+                &self.project_sanitizer,
                 self.minecraft_path.clone(),
                 pack,
                 profile.clone(),

@@ -82,20 +82,19 @@ impl AssetLibrary {
     }
 }
 
-impl PackCompiler {
+impl<'a> PackCompiler<'a> {
     pub fn populate_asset_library(&mut self) -> anyhow::Result<()> {
         let tracked_files = self.tracker.condence(&self.bundles)?;
 
         for file in tracked_files {
-            let absolute_path = self.bundles_path.join(&file);
-            let asset_path = file.iter().skip(1).collect::<PathBuf>();
+            let asset_path = file
+                .strip_prefix(&self.bundles_path)?
+                .iter()
+                .skip(1)
+                .collect::<PathBuf>();
 
-            if let Err(e) = self.library.load_asset(&asset_path, &absolute_path) {
-                println!(
-                    "[WARNING] Parse error at \"{}\":\n{}",
-                    absolute_path.display(),
-                    e
-                );
+            if let Err(e) = self.library.load_asset(&asset_path, &file) {
+                println!("[WARNING] Parse error at \"{}\":\n{}", file.display(), e);
             }
         }
 

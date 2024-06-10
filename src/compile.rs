@@ -4,7 +4,7 @@ use anyhow::Context;
 
 use crate::{
     config::{CollectionConfig, PackMetaConfig, ProfileConfig},
-    minecraft::asset::types::text::RawText,
+    sanitize::PathSanitizer,
 };
 
 use self::{library::AssetLibrary, tracking::AssetTracker};
@@ -14,10 +14,11 @@ pub mod library;
 pub mod redirect;
 pub mod tracking;
 
-pub struct PackCompiler {
+pub struct PackCompiler<'a> {
+    project_sanitizer: &'a PathSanitizer,
     compile_path: PathBuf,
     bundles_path: PathBuf,
-    project_path: PathBuf,
+    redirects_path: PathBuf,
     resourcepack_path: PathBuf,
     pack: PackMetaConfig,
     profile: Arc<ProfileConfig>,
@@ -27,9 +28,9 @@ pub struct PackCompiler {
     tracker: Arc<AssetTracker>,
 }
 
-impl PackCompiler {
+impl<'a> PackCompiler<'a> {
     pub fn new(
-        project_path: PathBuf,
+        project_sanitizer: &'a PathSanitizer,
         minecraft_path: PathBuf,
         pack: PackMetaConfig,
         profile: Arc<ProfileConfig>,
@@ -39,26 +40,37 @@ impl PackCompiler {
         let name = pack
             .name
             .clone()
-            .filter(RawText::is_empty)
+            .filter(|t| !t.is_empty())
             .with_context(|| "pack name is empty")?
             .to_string();
 
-        let compile_path = project_path.join("build").join(&name);
+        let compile_path = project_sanitizer.join(PathBuf::from("build").join(&name))?;
+        let source_path = project_sanitizer.restricted_path.join("src");
 
-        Ok(Self {
+        let mut compiler = Self {
+            project_sanitizer,
             pack,
             profile,
-            bundles_path: project_path
-                .join("src")
-                .canonicalize()
-                .expect("Failed to get absolute bundle path."),
+            bundles_path: source_path.join("bundles"),
+            redirects_path: source_path.join("redirects"),
             resourcepack_path: minecraft_path.join("resourcepacks").join(name),
             compile_path,
             library: Default::default(),
             tracker,
-            redirects: build.redirects,
-            bundles: build.bundles,
-            project_path,
-        })
+            redirects: Vec::with_capacity(build.redirects.len()),
+            bundles: Vec::with_capacity(build.bundles.len()),
+        };
+
+        for bundle in build.bundles {
+            compiler.bundles.push(compiler.get_bundle_path(bundle)?);
+        }
+
+        for redirect in build.redirects {
+            compiler
+                .redirects
+                .push(compiler.get_redirect_path(redirect)?);
+        }
+
+        Ok(compiler)
     }
 }

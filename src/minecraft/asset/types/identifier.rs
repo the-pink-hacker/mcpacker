@@ -1,5 +1,4 @@
 use std::{
-    ffi::OsStr,
     fmt,
     path::{Path, PathBuf},
     str::FromStr,
@@ -14,6 +13,7 @@ const DEFAULT_NAMESPACE: &str = "minecraft";
 #[serde(rename_all = "snake_case")]
 pub enum AssetType {
     Model,
+    ModelPreprocessed,
     Blockstate,
     Texture,
     Atlas,
@@ -28,7 +28,6 @@ pub enum AssetType {
 pub struct Identifier {
     pub namespace: String,
     pub path: PathBuf,
-    pub is_virtual: bool,
 }
 
 impl Identifier {
@@ -36,15 +35,6 @@ impl Identifier {
         Self {
             namespace: namespace.into(),
             path: path.into(),
-            is_virtual: false,
-        }
-    }
-
-    pub fn virtual_id(namespace: impl Into<String>, path: impl Into<PathBuf>) -> Self {
-        Self {
-            namespace: namespace.into(),
-            path: path.into(),
-            is_virtual: true,
         }
     }
 
@@ -52,7 +42,6 @@ impl Identifier {
         Self {
             namespace: DEFAULT_NAMESPACE.into(),
             path: path.into(),
-            is_virtual: false,
         }
     }
 
@@ -74,14 +63,16 @@ impl Identifier {
             .next()
             .map_or(None, |f| f.to_str())
             .map_or(None, |f| match f {
-                "models" => Some(AssetType::Model),
+                "models" => value.extension().map_or(None, |e| match e.to_str() {
+                    Some("json") => Some(AssetType::Model),
+                    Some("mcpacker") => Some(AssetType::ModelPreprocessed),
+                    _ => None,
+                }),
                 "blockstates" => Some(AssetType::Blockstate),
-                "textures" => value.extension().map_or(None, |e| {
-                    match e.to_string_lossy().to_mut().clone().as_str() {
-                        "png" => Some(AssetType::Texture),
-                        "mcmeta" => Some(AssetType::TextureMeta),
-                        _ => None,
-                    }
+                "textures" => value.extension().map_or(None, |e| match e.to_str() {
+                    Some("png") => Some(AssetType::Texture),
+                    Some("mcmeta") => Some(AssetType::TextureMeta),
+                    _ => None,
                 }),
                 "atlases" => Some(AssetType::Atlas),
                 _ => None,
@@ -93,24 +84,18 @@ impl Identifier {
                 )
             })?;
 
-        let mut asset_path = path_list.collect::<PathBuf>().with_extension("");
+        let asset_path = path_list
+            .collect::<PathBuf>()
+            .with_extension("")
+            .with_extension("");
 
-        let asset_path_partial_extension = asset_path.clone();
-
-        asset_path.set_extension("");
-
-        match asset_path_partial_extension
-            .extension()
-            .map_or(None, OsStr::to_str)
-        {
-            Some("virtual") => Ok((asset_type, Identifier::virtual_id(namespace, asset_path))),
-            _ => Ok((asset_type, Identifier::new(namespace, asset_path))),
-        }
+        Ok((asset_type, Identifier::new(namespace, asset_path)))
     }
 
     pub fn to_path(&self, asset_path: &PathBuf, asset_type: &AssetType) -> PathBuf {
         let (folder, extension) = match asset_type {
             AssetType::Model => ("models", "json"),
+            AssetType::ModelPreprocessed => ("models", "mcpacker"),
             AssetType::Blockstate => ("blockstates", "json"),
             AssetType::Texture => ("textures", "png"),
             AssetType::Atlas => ("atlases", "json"),
@@ -131,6 +116,12 @@ impl Identifier {
     pub fn is_minecraft(&self) -> bool {
         self.namespace == DEFAULT_NAMESPACE
     }
+
+    pub fn is_virtual(&self) -> bool {
+        self.path.file_name().map_or(false, |file_name| {
+            Some("virtual") == file_name.to_string_lossy().split_once('#').map(|(_, f)| f)
+        })
+    }
 }
 
 impl FromStr for Identifier {
@@ -142,7 +133,7 @@ impl FromStr for Identifier {
         }
 
         let (namespace, path) = s.split_once(":").unwrap_or_else(|| (DEFAULT_NAMESPACE, s));
-        Ok(Self::new(namespace, PathBuf::from(path)))
+        Ok(Identifier::new(namespace, path))
     }
 }
 
@@ -243,6 +234,13 @@ mod tests {
     }
 
     #[test]
+    fn from_path_minecraft_model_preprocessed() {
+        let id = Identifier::minecraft("block/sponge");
+        let result = Identifier::from_path("minecraft/models/block/sponge.mcpacker").unwrap();
+        assert_eq!((AssetType::ModelPreprocessed, id), result);
+    }
+
+    #[test]
     fn from_path_minecraft_blockstate() {
         let id = Identifier::minecraft("block/sponge");
         let result = Identifier::from_path("minecraft/blockstates/block/sponge.json").unwrap();
@@ -282,13 +280,25 @@ mod tests {
 
     #[test]
     fn virtual_asset() {
-        let (_, id) = Identifier::from_path("minecraft/models/block/dirt.virtual.json").unwrap();
-        assert!(id.is_virtual);
+        let (_, id) = Identifier::from_path("minecraft/models/block/dirt#virtual.json").unwrap();
+        assert!(id.is_virtual());
     }
 
     #[test]
     fn real_asset() {
         let (_, id) = Identifier::from_path("minecraft/models/block/dirt.json").unwrap();
-        assert!(!id.is_virtual);
+        assert!(!id.is_virtual());
+    }
+
+    #[test]
+    fn virtual_string_asset() {
+        let id = Identifier::from_str("minecraft:block/dirt#virtual").unwrap();
+        assert!(id.is_virtual());
+    }
+
+    #[test]
+    fn real_string_asset() {
+        let id = Identifier::from_str("minecraft:block/dirt").unwrap();
+        assert!(!id.is_virtual());
     }
 }

@@ -5,15 +5,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::anyhow;
 use serde::Serialize;
 
-use crate::minecraft::asset::{
-    atlas::Atlas,
-    blockstate::Blockstate,
-    model::Model,
-    texture::TextureMeta,
-    types::identifier::{AssetType, Identifier},
-    Asset,
+use crate::{
+    asset::model::ModelPreprocessed,
+    minecraft::asset::{
+        atlas::Atlas,
+        blockstate::Blockstate,
+        model::Model,
+        texture::TextureMeta,
+        types::identifier::{AssetType, Identifier},
+        Asset,
+    },
 };
 
 use super::PackCompiler;
@@ -21,6 +25,7 @@ use super::PackCompiler;
 #[derive(Debug, Default)]
 pub struct AssetLibrary {
     pub models: HashMap<Identifier, Model>,
+    pub models_preprocessed: HashMap<Identifier, ModelPreprocessed>,
     pub blockstates: HashMap<Identifier, Blockstate>,
     pub atlases: HashMap<Identifier, Atlas>,
     pub textures: HashMap<Identifier, PathBuf>,
@@ -37,6 +42,7 @@ impl AssetLibrary {
 
         match asset_type {
             AssetType::Model => self.load_model(id, asset_path_absolute),
+            AssetType::ModelPreprocessed => self.load_model_preprocessed(id, asset_path_absolute),
             AssetType::Blockstate => self.load_blockstate(id, asset_path_absolute),
             AssetType::Texture => {
                 self.textures.insert(id, asset_path_absolute.to_owned());
@@ -44,7 +50,7 @@ impl AssetLibrary {
             }
             AssetType::Atlas => self.load_atlas(id, asset_path_absolute),
             AssetType::TextureMeta => self.load_texture_meta(id, asset_path_absolute),
-            _ => unimplemented!("Asset type unsupported"),
+            _ => Err(anyhow!("Asset type unsupported")),
         }
     }
 
@@ -53,6 +59,17 @@ impl AssetLibrary {
         let parsed = serde_json::from_str(&raw)?;
 
         self.models.insert(id, parsed);
+
+        Ok(())
+    }
+
+    pub fn load_model_preprocessed(&mut self, id: Identifier, path: &Path) -> anyhow::Result<()> {
+        let raw = std::fs::read_to_string(path)?;
+        let parsed = serde_json::from_str(&raw)?;
+
+        dbg!(&parsed);
+
+        self.models_preprocessed.insert(id, parsed);
 
         Ok(())
     }
@@ -129,7 +146,7 @@ impl<'a> PackCompiler<'a> {
     }
 
     fn write_asset<T: Asset + Serialize>(&self, id: &Identifier, asset: &T) -> anyhow::Result<()> {
-        if id.is_virtual {
+        if id.is_virtual() {
             return Ok(());
         }
 

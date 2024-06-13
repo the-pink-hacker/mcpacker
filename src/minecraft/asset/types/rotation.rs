@@ -1,12 +1,19 @@
 use anyhow::anyhow;
 use serde::{de::Visitor, Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum StateRotation {
+    #[default]
     Degrees0,
     Degrees90,
     Degrees180,
     Degrees270,
+}
+
+impl StateRotation {
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
 }
 
 impl<'de> Deserialize<'de> for StateRotation {

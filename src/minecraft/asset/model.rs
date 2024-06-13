@@ -6,6 +6,7 @@ use super::{
     types::{
         identifier::{AssetType, Identifier},
         rotation::StateRotation,
+        variable::VariableIdentifier,
         vec::{Vec3, Vec4},
     },
     Asset,
@@ -29,9 +30,6 @@ impl Asset for Model {
         AssetType::Model
     }
 }
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct VariableIdentifier(String);
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]

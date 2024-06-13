@@ -1,3 +1,5 @@
+use crate::minecraft::serialize::*;
+
 use super::{
     types::{
         identifier::{AssetType, Identifier},
@@ -29,9 +31,12 @@ impl Asset for Blockstate {
 pub enum ModelState {
     Single {
         model: Identifier,
-        x: Option<StateRotation>,
-        y: Option<StateRotation>,
-        uvlock: Option<bool>,
+        #[serde(default, skip_serializing_if = "StateRotation::is_default")]
+        x: StateRotation,
+        #[serde(default, skip_serializing_if = "StateRotation::is_default")]
+        y: StateRotation,
+        #[serde(default, skip_serializing_if = "is_false")]
+        uvlock: bool,
     },
     Weighted(Vec<WeightedState>),
 }
@@ -40,10 +45,14 @@ pub enum ModelState {
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct WeightedState {
     model: Identifier,
-    x: Option<StateRotation>,
-    y: Option<StateRotation>,
-    uvlock: Option<bool>,
-    weight: Option<u8>,
+    #[serde(default, skip_serializing_if = "StateRotation::is_default")]
+    x: StateRotation,
+    #[serde(default, skip_serializing_if = "StateRotation::is_default")]
+    y: StateRotation,
+    #[serde(default, skip_serializing_if = "is_false")]
+    uvlock: bool,
+    #[serde(default = "one", skip_serializing_if = "is_zero")]
+    weight: u8,
 }
 
 #[skip_serializing_none]
@@ -104,9 +113,9 @@ mod tests {
             "test=1234".to_string(),
             ModelState::Single {
                 model: Identifier::minecraft("block/dirt"),
-                x: Some(StateRotation::Degrees180),
-                y: None,
-                uvlock: Some(true),
+                x: StateRotation::Degrees180,
+                y: StateRotation::Degrees0,
+                uvlock: true,
             },
         )]))
     );
@@ -132,17 +141,17 @@ mod tests {
             ModelState::Weighted(vec![
                 WeightedState {
                     model: Identifier::minecraft("block/grass_block"),
-                    x: None,
-                    y: None,
-                    uvlock: None,
-                    weight: None,
+                    x: StateRotation::Degrees0,
+                    y: StateRotation::Degrees0,
+                    uvlock: false,
+                    weight: 1,
                 },
                 WeightedState {
                     model: Identifier::minecraft("block/grass_block"),
-                    x: Some(StateRotation::Degrees90),
-                    y: None,
-                    uvlock: None,
-                    weight: Some(2),
+                    x: StateRotation::Degrees90,
+                    y: StateRotation::Degrees0,
+                    uvlock: false,
+                    weight: 2,
                 }
             ])
         )]))

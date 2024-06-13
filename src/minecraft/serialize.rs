@@ -48,6 +48,22 @@ impl From<FloatInt> for f32 {
     }
 }
 
+pub fn is_true(value: &bool) -> bool {
+    *value
+}
+
+pub fn is_false(value: &bool) -> bool {
+    !value
+}
+
+pub fn is_zero(value: &u8) -> bool {
+    *value == 0
+}
+
+pub fn one() -> u8 {
+    1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

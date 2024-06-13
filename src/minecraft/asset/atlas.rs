@@ -4,11 +4,20 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::types::identifier::Identifier;
+use super::{
+    types::identifier::{AssetType, Identifier},
+    Asset,
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Atlas {
     sources: Vec<AtlasSource>,
+}
+
+impl Asset for Atlas {
+    fn get_type() -> AssetType {
+        AssetType::Atlas
+    }
 }
 
 #[skip_serializing_none]

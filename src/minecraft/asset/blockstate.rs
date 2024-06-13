@@ -1,4 +1,10 @@
-use super::types::{identifier::Identifier, rotation::StateRotation};
+use super::{
+    types::{
+        identifier::{AssetType, Identifier},
+        rotation::StateRotation,
+    },
+    Asset,
+};
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -9,6 +15,12 @@ use serde_with::skip_serializing_none;
 pub enum Blockstate {
     Variants(IndexMap<String, ModelState>),
     Multipart(Vec<BlockstateMultipart>),
+}
+
+impl Asset for Blockstate {
+    fn get_type() -> AssetType {
+        AssetType::Blockstate
+    }
 }
 
 #[skip_serializing_none]

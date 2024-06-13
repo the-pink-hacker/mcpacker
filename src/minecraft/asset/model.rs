@@ -2,10 +2,13 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use super::types::{
-    identifier::Identifier,
-    rotation::StateRotation,
-    vec::{Vec3, Vec4},
+use super::{
+    types::{
+        identifier::{AssetType, Identifier},
+        rotation::StateRotation,
+        vec::{Vec3, Vec4},
+    },
+    Asset,
 };
 
 #[skip_serializing_none]
@@ -19,6 +22,12 @@ pub struct Model {
     pub elements: Option<Vec<ModelElement>>,
     pub gui_light: Option<GuiLightDirection>,
     pub overrides: Option<Vec<ItemModelOverride>>,
+}
+
+impl Asset for Model {
+    fn get_type() -> AssetType {
+        AssetType::Model
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

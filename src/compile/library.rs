@@ -5,12 +5,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use serde::Serialize;
+
 use crate::minecraft::asset::{
     atlas::Atlas,
     blockstate::Blockstate,
     model::Model,
     texture::TextureMeta,
     types::identifier::{AssetType, Identifier},
+    Asset,
 };
 
 use super::PackCompiler;
@@ -103,15 +106,15 @@ impl<'a> PackCompiler<'a> {
 
     pub fn write_asset_library(&self) -> anyhow::Result<()> {
         for (id, model) in &self.library.models {
-            self.write_asset(id, model, &AssetType::Model)?;
+            self.write_asset(id, model)?;
         }
 
         for (id, blockstate) in &self.library.blockstates {
-            self.write_asset(id, blockstate, &AssetType::Blockstate)?;
+            self.write_asset(id, blockstate)?;
         }
 
         for (id, atlas) in &self.library.atlases {
-            self.write_asset(id, atlas, &AssetType::Atlas)?;
+            self.write_asset(id, atlas)?;
         }
 
         for (id, texture) in &self.library.textures {
@@ -119,20 +122,18 @@ impl<'a> PackCompiler<'a> {
         }
 
         for (id, texture_meta) in &self.library.textures_meta {
-            println!("{:#?}", texture_meta);
-            self.write_asset(id, texture_meta, &AssetType::TextureMeta)?;
+            self.write_asset(id, texture_meta)?;
         }
 
         Ok(())
     }
 
-    fn write_asset(
-        &self,
-        id: &Identifier,
-        asset: impl serde::Serialize,
-        asset_type: &AssetType,
-    ) -> anyhow::Result<()> {
-        let output_file_path = id.to_path(&self.compile_path.join("assets"), asset_type);
+    fn write_asset<T: Asset + Serialize>(&self, id: &Identifier, asset: &T) -> anyhow::Result<()> {
+        if id.is_virtual {
+            return Ok(());
+        }
+
+        let output_file_path = id.to_path(&self.compile_path.join("assets"), &T::get_type());
 
         let mut output_path = output_file_path.clone();
         output_path.pop();

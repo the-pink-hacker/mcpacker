@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsStr,
     fmt,
     path::{Path, PathBuf},
     str::FromStr,
@@ -27,6 +28,7 @@ pub enum AssetType {
 pub struct Identifier {
     pub namespace: String,
     pub path: PathBuf,
+    pub is_virtual: bool,
 }
 
 impl Identifier {
@@ -34,6 +36,15 @@ impl Identifier {
         Self {
             namespace: namespace.into(),
             path: path.into(),
+            is_virtual: false,
+        }
+    }
+
+    pub fn virtual_id(namespace: impl Into<String>, path: impl Into<PathBuf>) -> Self {
+        Self {
+            namespace: namespace.into(),
+            path: path.into(),
+            is_virtual: true,
         }
     }
 
@@ -41,10 +52,12 @@ impl Identifier {
         Self {
             namespace: DEFAULT_NAMESPACE.into(),
             path: path.into(),
+            is_virtual: false,
         }
     }
 
-    pub fn from_path(value: &Path) -> anyhow::Result<(AssetType, Self)> {
+    pub fn from_path<P: AsRef<Path>>(value: P) -> anyhow::Result<(AssetType, Self)> {
+        let value = value.as_ref();
         let mut path_list = value.iter();
 
         let namespace = path_list
@@ -80,12 +93,19 @@ impl Identifier {
                 )
             })?;
 
-        let asset_path = path_list
-            .collect::<PathBuf>()
-            .with_extension("")
-            .with_extension("");
+        let mut asset_path = path_list.collect::<PathBuf>().with_extension("");
 
-        Ok((asset_type, Identifier::new(namespace, asset_path)))
+        let asset_path_partial_extension = asset_path.clone();
+
+        asset_path.set_extension("");
+
+        match asset_path_partial_extension
+            .extension()
+            .map_or(None, OsStr::to_str)
+        {
+            Some("virtual") => Ok((asset_type, Identifier::virtual_id(namespace, asset_path))),
+            _ => Ok((asset_type, Identifier::new(namespace, asset_path))),
+        }
     }
 
     pub fn to_path(&self, asset_path: &PathBuf, asset_type: &AssetType) -> PathBuf {
@@ -218,16 +238,14 @@ mod tests {
     #[test]
     fn from_path_minecraft_model() {
         let id = Identifier::minecraft("block/sponge");
-        let result =
-            Identifier::from_path(Path::new("minecraft/models/block/sponge.json")).unwrap();
+        let result = Identifier::from_path("minecraft/models/block/sponge.json").unwrap();
         assert_eq!((AssetType::Model, id), result);
     }
 
     #[test]
     fn from_path_minecraft_blockstate() {
         let id = Identifier::minecraft("block/sponge");
-        let result =
-            Identifier::from_path(Path::new("minecraft/blockstates/block/sponge.json")).unwrap();
+        let result = Identifier::from_path("minecraft/blockstates/block/sponge.json").unwrap();
         assert_eq!((AssetType::Blockstate, id), result);
     }
 
@@ -235,32 +253,42 @@ mod tests {
     fn from_path_minecraft_texture() {
         let id = Identifier::minecraft("block/crafting_table_top");
         let result =
-            Identifier::from_path(Path::new("minecraft/textures/block/crafting_table_top.png"))
-                .unwrap();
+            Identifier::from_path("minecraft/textures/block/crafting_table_top.png").unwrap();
         assert_eq!((AssetType::Texture, id), result);
     }
 
     #[test]
     fn from_path_minecraft_texture_meta() {
         let id = Identifier::minecraft("block/crafting_table_top");
-        let result = Identifier::from_path(Path::new(
-            "minecraft/textures/block/crafting_table_top.png.mcmeta",
-        ))
-        .unwrap();
+        let result =
+            Identifier::from_path("minecraft/textures/block/crafting_table_top.png.mcmeta")
+                .unwrap();
         assert_eq!((AssetType::TextureMeta, id), result);
     }
 
     #[test]
     fn from_path_minecraft_atlas() {
         let id = Identifier::minecraft("blocks");
-        let result = Identifier::from_path(Path::new("minecraft/atlases/blocks.json")).unwrap();
+        let result = Identifier::from_path("minecraft/atlases/blocks.json").unwrap();
         assert_eq!((AssetType::Atlas, id), result);
     }
 
     #[test]
     fn from_path_other() {
         let id = Identifier::new("quark", "block/sponge");
-        let result = Identifier::from_path(Path::new("quark/models/block/sponge.json")).unwrap();
+        let result = Identifier::from_path("quark/models/block/sponge.json").unwrap();
         assert_eq!((AssetType::Model, id), result);
+    }
+
+    #[test]
+    fn virtual_asset() {
+        let (_, id) = Identifier::from_path("minecraft/models/block/dirt.virtual.json").unwrap();
+        assert!(id.is_virtual);
+    }
+
+    #[test]
+    fn real_asset() {
+        let (_, id) = Identifier::from_path("minecraft/models/block/dirt.json").unwrap();
+        assert!(!id.is_virtual);
     }
 }

@@ -1,9 +1,17 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
+use super::{types::identifier::AssetType, Asset};
+
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TextureMeta {
     animation: TextureAnimation,
+}
+
+impl Asset for TextureMeta {
+    fn get_type() -> AssetType {
+        AssetType::TextureMeta
+    }
 }
 
 #[skip_serializing_none]

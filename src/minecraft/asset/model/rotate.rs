@@ -103,12 +103,16 @@ impl Rotatable for ElementFaces {
         self.north = temp;
 
         if let Some(face) = &mut self.north {
-            face.rotation = face.rotation.opposite();
+            if face.uv.is_some() {
+                face.rotation = face.rotation.opposite();
+            }
             face.cullface.rotate_x_quarter();
         }
 
         if let Some(face) = &mut self.east {
-            face.rotation = face.rotation.rotate_quarter_counter();
+            if face.uv.is_some() {
+                face.rotation = face.rotation.rotate_quarter_counter();
+            }
             face.cullface.rotate_x_quarter();
         }
 
@@ -117,12 +121,17 @@ impl Rotatable for ElementFaces {
         }
 
         if let Some(face) = &mut self.west {
-            face.rotation = face.rotation.rotate_quarter();
+            if face.uv.is_some() {
+                face.rotation = face.rotation.rotate_quarter();
+            }
+
             face.cullface.rotate_x_quarter();
         }
 
         if let Some(face) = &mut self.up {
-            face.rotation = face.rotation.opposite();
+            if face.uv.is_some() {
+                face.rotation = face.rotation.opposite();
+            }
             face.cullface.rotate_x_quarter();
         }
 
@@ -155,12 +164,16 @@ impl Rotatable for ElementFaces {
         }
 
         if let Some(face) = &mut self.up {
-            face.rotation = face.rotation.rotate_quarter_counter();
+            if face.uv.is_some() {
+                face.rotation = face.rotation.rotate_quarter_counter();
+            }
             face.cullface.rotate_y_quarter();
         }
 
         if let Some(face) = &mut self.down {
-            face.rotation = face.rotation.rotate_quarter();
+            if face.uv.is_some() {
+                face.rotation = face.rotation.rotate_quarter();
+            }
             face.cullface.rotate_y_quarter();
         }
     }

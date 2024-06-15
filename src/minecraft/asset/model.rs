@@ -1,4 +1,5 @@
 pub mod rotate;
+pub mod translate;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -30,6 +31,14 @@ pub struct Model {
     pub gui_light: Option<GuiLightDirection>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub overrides: Vec<ItemModelOverride>,
+}
+
+impl Model {
+    pub fn set_cullface(&mut self, value: &CullDirection) {
+        for element in &mut self.elements {
+            element.faces.set_cullface(value);
+        }
+    }
 }
 
 impl Asset for Model {
@@ -88,6 +97,32 @@ pub struct ElementFaces {
 }
 
 impl ElementFaces {
+    pub fn set_cullface(&mut self, value: &CullDirection) {
+        if let Some(face) = &mut self.north {
+            face.cullface = value.clone();
+        }
+
+        if let Some(face) = &mut self.east {
+            face.cullface = value.clone();
+        }
+
+        if let Some(face) = &mut self.south {
+            face.cullface = value.clone();
+        }
+
+        if let Some(face) = &mut self.west {
+            face.cullface = value.clone();
+        }
+
+        if let Some(face) = &mut self.up {
+            face.cullface = value.clone();
+        }
+
+        if let Some(face) = &mut self.down {
+            face.cullface = value.clone();
+        }
+    }
+
     fn is_default(&self) -> bool {
         self.north.is_none()
             && self.east.is_none()

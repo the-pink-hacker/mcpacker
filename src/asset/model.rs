@@ -4,11 +4,12 @@ use anyhow::Context;
 use serde::Deserialize;
 
 use crate::minecraft::asset::{
-    model::{rotate::Rotatable, Model},
+    model::{rotate::Rotatable, translate::Translate, CullDirection, Model},
     types::{
         identifier::{AssetType, Identifier},
         rotation::StateRotation,
         variable::VariableIdentifier,
+        vec::Vec3,
     },
     Asset,
 };
@@ -33,9 +34,22 @@ impl Asset for ModelPreprocessed {
 pub struct ModelComposition {
     model: VariableIdentifier,
     #[serde(default)]
-    x: StateRotation,
-    #[serde(default)]
-    y: StateRotation,
+    transformations: Vec<Transformation>,
+    cullface: Option<CullDirection>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum Transformation {
+    Rotate {
+        #[serde(default)]
+        x: StateRotation,
+        #[serde(default)]
+        y: StateRotation,
+    },
+    Translate {
+        amount: Vec3,
+    },
 }
 
 impl ModelComposition {
@@ -53,8 +67,19 @@ impl ModelComposition {
             .with_context(|| format!("Failed to locate model: {}", lookup_id))?
             .clone();
 
-        lookup_model.rotate_x(&self.x);
-        lookup_model.rotate_y(&self.y);
+        if let Some(cullface) = &self.cullface {
+            lookup_model.set_cullface(cullface);
+        }
+
+        for transform in &self.transformations {
+            match transform {
+                Transformation::Rotate { x, y } => {
+                    lookup_model.rotate_x(x);
+                    lookup_model.rotate_y(y);
+                }
+                Transformation::Translate { amount } => lookup_model.translate(amount),
+            }
+        }
 
         for element in &lookup_model.elements {
             model.elements.push(element.clone());

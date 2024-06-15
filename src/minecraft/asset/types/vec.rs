@@ -1,8 +1,10 @@
+use std::ops::{Add, AddAssign};
+
 use serde::{de::Visitor, ser::SerializeSeq, Deserialize, Serialize};
 
 use crate::minecraft::serialize::FloatInt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -10,6 +12,10 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self { x, y, z }
+    }
+
     pub fn into_tuple_mut<'a>(&'a mut self) -> (&'a mut f32, &'a mut f32, &'a mut f32) {
         (&mut self.x, &mut self.y, &mut self.z)
     }
@@ -22,6 +28,32 @@ impl Vec3 {
 impl<'a> From<&'a mut Vec3> for (&'a mut f32, &'a mut f32, &'a mut f32) {
     fn from(value: &'a mut Vec3) -> Self {
         value.into_tuple_mut()
+    }
+}
+
+impl From<(f32, f32, f32)> for Vec3 {
+    fn from(value: (f32, f32, f32)) -> Self {
+        let (x, y, z) = value;
+        Self { x, y, z }
+    }
+}
+
+impl AddAssign for Vec3 {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+    }
+}
+
+impl Add for Vec3 {
+    type Output = Self;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+        self
     }
 }
 
@@ -61,17 +93,15 @@ impl<'de> Visitor<'de> for Vec3Visitor {
     where
         A: serde::de::SeqAccess<'de>,
     {
-        let length = seq.size_hint().unwrap_or_default();
-        if length == 3 {
-            return Err(serde::de::Error::custom(format!(
-                "Expected a length of 3; found: {}",
-                length
-            )));
-        }
-
-        let x = seq.next_element()?.unwrap();
-        let y = seq.next_element()?.unwrap();
-        let z = seq.next_element()?.unwrap();
+        let x = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+        let y = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+        let z = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
 
         Ok(Self::Value { x, y, z })
     }
@@ -126,19 +156,40 @@ impl<'de> Visitor<'de> for Vec4Visitor {
     where
         A: serde::de::SeqAccess<'de>,
     {
-        let length = seq.size_hint().unwrap_or_default();
-        if length == 4 {
-            return Err(serde::de::Error::custom(format!(
-                "Expected a length of 4; found: {}",
-                length
-            )));
-        }
-
-        let w = seq.next_element()?.unwrap();
-        let x = seq.next_element()?.unwrap();
-        let y = seq.next_element()?.unwrap();
-        let z = seq.next_element()?.unwrap();
+        let w = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+        let x = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+        let y = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+        let z = seq
+            .next_element()?
+            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
 
         Ok(Self::Value { w, x, y, z })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vec3_add() {
+        let a = Vec3::new(1.0, 2.0, 3.0);
+        let b = Vec3::new(2.0, 3.0, 1.0);
+        let expect = Vec3::new(3.0, 5.0, 4.0);
+        assert_eq!(a + b, expect);
+    }
+
+    #[test]
+    fn vec3_add_assign() {
+        let mut a = Vec3::new(1.0, 2.0, 3.0);
+        a += Vec3::new(2.0, 3.0, 1.0);
+        let expect = Vec3::new(3.0, 5.0, 4.0);
+        assert_eq!(a, expect);
     }
 }

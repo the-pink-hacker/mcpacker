@@ -40,12 +40,10 @@ impl Identifier {
 
 impl Model {
     pub fn apply_texture_redirect(&mut self, redirect: &Redirect) {
-        if let Some(ref mut textures) = &mut self.textures {
-            for texture in textures.values_mut() {
-                match texture {
-                    IdentifierOrVariable::Variable(_) => (),
-                    IdentifierOrVariable::Identifier(id) => id.apply_redirect(redirect),
-                }
+        for texture in self.textures.values_mut() {
+            match texture {
+                IdentifierOrVariable::Variable(_) => (),
+                IdentifierOrVariable::Identifier(id) => id.apply_redirect(redirect),
             }
         }
     }

@@ -3,8 +3,14 @@ use std::{fmt::Display, str::FromStr};
 use anyhow::Context;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
-#[derive(Debug, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, DeserializeFromStr, SerializeDisplay)]
 pub struct VariableIdentifier(String);
+
+impl VariableIdentifier {
+    pub fn get_name(self) -> String {
+        self.0
+    }
+}
 
 impl Display for VariableIdentifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

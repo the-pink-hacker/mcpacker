@@ -51,8 +51,23 @@ pub struct WeightedState {
     y: StateRotation,
     #[serde(default, skip_serializing_if = "is_false")]
     uvlock: bool,
-    #[serde(default = "one", skip_serializing_if = "is_zero")]
+    #[serde(
+        default = "WeightedState::default_weight",
+        skip_serializing_if = "WeightedState::is_weight_default"
+    )]
     weight: u8,
+}
+
+impl WeightedState {
+    #[inline]
+    fn default_weight() -> u8 {
+        1
+    }
+
+    #[inline]
+    fn is_weight_default(value: &u8) -> bool {
+        *value == Self::default_weight()
+    }
 }
 
 #[skip_serializing_none]

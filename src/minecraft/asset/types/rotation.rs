@@ -14,6 +14,15 @@ impl StateRotation {
     pub fn is_default(&self) -> bool {
         *self == Self::default()
     }
+
+    pub fn quarters(&self) -> u8 {
+        match self {
+            Self::Degrees0 => 0,
+            Self::Degrees90 => 1,
+            Self::Degrees180 => 2,
+            Self::Degrees270 => 3,
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for StateRotation {

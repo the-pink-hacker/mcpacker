@@ -67,8 +67,6 @@ impl AssetLibrary {
         let raw = std::fs::read_to_string(path)?;
         let parsed = serde_json::from_str(&raw)?;
 
-        dbg!(&parsed);
-
         self.models_preprocessed.insert(id, parsed);
 
         Ok(())
@@ -124,6 +122,10 @@ impl<'a> PackCompiler<'a> {
     pub fn write_asset_library(&self) -> anyhow::Result<()> {
         for (id, model) in &self.library.models {
             self.write_asset(id, model)?;
+        }
+
+        for (id, model) in &self.library.models_preprocessed {
+            self.write_asset(id, &model.compile(&self.library.models)?)?;
         }
 
         for (id, blockstate) in &self.library.blockstates {

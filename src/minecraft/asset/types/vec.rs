@@ -10,8 +10,18 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    pub fn into_tuple_mut<'a>(&'a mut self) -> (&'a mut f32, &'a mut f32, &'a mut f32) {
+        (&mut self.x, &mut self.y, &mut self.z)
+    }
+
     fn into_float_int_list(self) -> [FloatInt; 3] {
         [self.x.into(), self.y.into(), self.z.into()]
+    }
+}
+
+impl<'a> From<&'a mut Vec3> for (&'a mut f32, &'a mut f32, &'a mut f32) {
+    fn from(value: &'a mut Vec3) -> Self {
+        value.into_tuple_mut()
     }
 }
 

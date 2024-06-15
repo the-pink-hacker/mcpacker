@@ -48,20 +48,24 @@ impl From<FloatInt> for f32 {
     }
 }
 
+#[inline]
 pub fn is_true(value: &bool) -> bool {
     *value
 }
 
+#[inline]
 pub fn is_false(value: &bool) -> bool {
     !value
 }
 
-pub fn is_zero(value: &u8) -> bool {
-    *value == 0
+#[inline]
+pub fn get_true() -> bool {
+    true
 }
 
-pub fn one() -> u8 {
-    1
+#[inline]
+pub fn get_false() -> bool {
+    false
 }
 
 #[cfg(test)]

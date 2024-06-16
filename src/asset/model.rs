@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
+use indexmap::IndexMap;
 use serde::Deserialize;
 
 use crate::minecraft::asset::{
@@ -36,6 +37,8 @@ pub struct ModelComposition {
     #[serde(default)]
     transformations: Vec<Transformation>,
     cullface: Option<CullDirection>,
+    #[serde(default)]
+    textures: IndexMap<String, VariableIdentifier>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,8 +84,18 @@ impl ModelComposition {
             }
         }
 
+        for (old, new) in &self.textures {
+            lookup_model.update_texture(&VariableIdentifier::new(old.clone()), new.clone());
+        }
+
         for element in &lookup_model.elements {
             model.elements.push(element.clone());
+        }
+
+        for (texture_name, texture_id) in &lookup_model.textures {
+            model
+                .textures
+                .insert(texture_name.clone(), texture_id.clone());
         }
 
         Ok(())

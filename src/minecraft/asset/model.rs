@@ -39,6 +39,18 @@ impl Model {
             element.faces.set_cullface(value);
         }
     }
+
+    pub fn update_texture(&mut self, old: &VariableIdentifier, new: VariableIdentifier) {
+        for element in &mut self.elements {
+            for face in &mut element.faces {
+                if let Some(face) = face {
+                    if face.texture == *old {
+                        face.texture = new.clone();
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Asset for Model {
@@ -98,28 +110,10 @@ pub struct ElementFaces {
 
 impl ElementFaces {
     pub fn set_cullface(&mut self, value: &CullDirection) {
-        if let Some(face) = &mut self.north {
-            face.cullface = value.clone();
-        }
-
-        if let Some(face) = &mut self.east {
-            face.cullface = value.clone();
-        }
-
-        if let Some(face) = &mut self.south {
-            face.cullface = value.clone();
-        }
-
-        if let Some(face) = &mut self.west {
-            face.cullface = value.clone();
-        }
-
-        if let Some(face) = &mut self.up {
-            face.cullface = value.clone();
-        }
-
-        if let Some(face) = &mut self.down {
-            face.cullface = value.clone();
+        for face in self {
+            if let Some(face) = face {
+                face.cullface = value.clone();
+            }
         }
     }
 
@@ -130,6 +124,52 @@ impl ElementFaces {
             && self.west.is_none()
             && self.up.is_none()
             && self.down.is_none()
+    }
+}
+
+impl IntoIterator for ElementFaces {
+    type Item = Option<ElementFace>;
+    type IntoIter = std::array::IntoIter<Self::Item, 6>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        [
+            self.north, self.east, self.south, self.west, self.up, self.down,
+        ]
+        .into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a ElementFaces {
+    type Item = Option<&'a ElementFace>;
+    type IntoIter = std::array::IntoIter<Self::Item, 6>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        [
+            self.north.as_ref(),
+            self.east.as_ref(),
+            self.south.as_ref(),
+            self.west.as_ref(),
+            self.up.as_ref(),
+            self.down.as_ref(),
+        ]
+        .into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut ElementFaces {
+    type Item = Option<&'a mut ElementFace>;
+    type IntoIter = std::array::IntoIter<Self::Item, 6>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        [
+            self.north.as_mut(),
+            self.east.as_mut(),
+            self.south.as_mut(),
+            self.west.as_mut(),
+            self.up.as_mut(),
+            self.down.as_mut(),
+        ]
+        .into_iter()
     }
 }
 

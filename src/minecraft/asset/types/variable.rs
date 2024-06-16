@@ -3,10 +3,14 @@ use std::{fmt::Display, str::FromStr};
 use anyhow::Context;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
-#[derive(Debug, Clone, DeserializeFromStr, SerializeDisplay)]
+#[derive(Debug, Clone, PartialEq, Eq, DeserializeFromStr, SerializeDisplay)]
 pub struct VariableIdentifier(String);
 
 impl VariableIdentifier {
+    pub fn new(value: String) -> Self {
+        Self(value)
+    }
+
     pub fn get_name(self) -> String {
         self.0
     }

@@ -18,7 +18,7 @@ use super::{
 };
 
 #[skip_serializing_none]
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct Model {
     pub parent: Option<Identifier>,
@@ -31,6 +31,8 @@ pub struct Model {
     pub gui_light: Option<GuiLightDirection>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub overrides: Vec<ItemModelOverride>,
+    #[serde(default, skip_serializing)]
+    pub mcpacker: ModelSettings,
 }
 
 impl Model {
@@ -56,6 +58,10 @@ impl Model {
 impl Asset for Model {
     fn get_type() -> AssetType {
         AssetType::Model
+    }
+
+    fn is_virtual(&self) -> bool {
+        self.mcpacker.is_virtual
     }
 }
 
@@ -252,4 +258,10 @@ pub enum GuiLightDirection {
 pub struct ItemModelOverride {
     predicate: IndexMap<String, i32>,
     model: Identifier,
+}
+
+#[derive(Debug, Default, Deserialize, Clone)]
+pub struct ModelSettings {
+    #[serde(rename = "virtual")]
+    is_virtual: bool,
 }

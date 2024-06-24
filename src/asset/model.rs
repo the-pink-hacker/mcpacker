@@ -15,14 +15,26 @@ use crate::minecraft::asset::{
     Asset,
 };
 
+use super::LoadableAsset;
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum ModelGeneric {
+    Preprocessed(ModelPreprocessed),
+    Normal(Model),
+}
+
+impl LoadableAsset for ModelGeneric {
+    fn load_asset<R: AsRef<str>>(raw: R) -> anyhow::Result<Self> {
+        Ok(serde_json::from_str(raw.as_ref())?)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ModelPreprocessed {
-    #[serde(flatten)]
-    model: Model,
     #[serde(default)]
-    import: HashMap<String, Identifier>,
-    #[serde(default)]
-    composition: Vec<ModelComposition>,
+    pub import: HashMap<String, ModelOrId>,
+    pub composition: Vec<ModelComposition>,
 }
 
 impl Asset for ModelPreprocessed {
@@ -42,6 +54,13 @@ pub struct ModelComposition {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum ModelOrId {
+    Id(Identifier),
+    Model(Model),
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum Transformation {
     Rotate {
@@ -56,19 +75,22 @@ enum Transformation {
 }
 
 impl ModelComposition {
-    pub fn compile(
+    fn compile(
         &self,
         model: &mut Model,
         models: &HashMap<Identifier, Model>,
-        variables: &HashMap<String, Identifier>,
+        variables: &HashMap<String, ModelOrId>,
     ) -> anyhow::Result<()> {
-        let lookup_id = variables
+        let variable = variables
             .get(&self.model.clone().get_name())
             .with_context(|| format!("Failed to locate model variable: {}", self.model))?;
-        let mut lookup_model = models
-            .get(lookup_id)
-            .with_context(|| format!("Failed to locate model: {}", lookup_id))?
-            .clone();
+        let mut lookup_model = match variable {
+            ModelOrId::Model(model) => model,
+            ModelOrId::Id(id) => models
+                .get(id)
+                .with_context(|| format!("Failed to locate model: {}", id))?,
+        }
+        .clone();
 
         if let Some(cullface) = &self.cullface {
             lookup_model.set_cullface(cullface);
@@ -98,15 +120,19 @@ impl ModelComposition {
                 .insert(texture_name.clone(), texture_id.clone());
         }
 
+        if let Some(parent) = lookup_model.parent {
+            model.parent = Some(parent.clone());
+        }
+
         Ok(())
     }
 }
 
 impl ModelPreprocessed {
     pub fn compile(&self, models: &HashMap<Identifier, Model>) -> anyhow::Result<Model> {
-        let mut model = self.model.clone();
+        let mut model = Model::default();
 
-        for ref mut part in &self.composition {
+        for part in &self.composition {
             part.compile(&mut model, models, &self.import)?;
         }
 

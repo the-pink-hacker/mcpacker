@@ -17,7 +17,7 @@ use crate::{
     minecraft::asset::types::identifier::AssetType,
 };
 
-use super::PackCompiler;
+use super::{library::CompiledAssetLibrary, PackCompiler};
 
 const PACK_META_NAME: &str = "pack.mcmeta";
 const PACK_ICON_NAME: &str = "pack.png";
@@ -48,15 +48,16 @@ impl<'a> PackCompiler<'a> {
     }
 
     fn run_failable(&mut self) -> anyhow::Result<()> {
-        self.populate_asset_library()?;
+        let mut library = self.populate_asset_library()?.compile()?;
 
-        self.process_redirects()?;
+        self.process_redirects(&mut library)?;
 
         self.setup_compile_path()?;
         self.compile_meta()?;
         self.compile_icon()?;
         self.compile_license()?;
-        self.write_asset_library()?;
+
+        library.write_contents(&self)?;
 
         self.output()?;
         self.relocate()?;
@@ -64,15 +65,14 @@ impl<'a> PackCompiler<'a> {
         Ok(())
     }
 
-    fn process_redirects(&mut self) -> anyhow::Result<()> {
+    fn process_redirects(&mut self, library: &mut CompiledAssetLibrary) -> anyhow::Result<()> {
         for redirect_path in &self.redirects {
-            //println!("{}", self.bundles_path.join("redi"));
             let raw = std::fs::read_to_string(self.get_redirect_path(redirect_path)?)?;
             let redirect = toml::from_str::<RedirectFile>(&raw)?.redirect;
 
             match redirect.asset_type {
                 AssetType::Texture => {
-                    for model in self.library.models.values_mut() {
+                    for model in library.models.values_mut() {
                         model.apply_texture_redirect(&redirect);
                     }
                 }

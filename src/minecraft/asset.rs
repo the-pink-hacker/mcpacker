@@ -8,4 +8,8 @@ pub mod types;
 
 pub trait Asset {
     fn get_type() -> AssetType;
+
+    fn is_virtual(&self) -> bool {
+        false
+    }
 }

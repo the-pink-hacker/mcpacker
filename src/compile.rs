@@ -7,9 +7,10 @@ use crate::{
     sanitize::PathSanitizer,
 };
 
-use self::{library::AssetLibrary, tracking::AssetTracker};
+use self::tracking::AssetTracker;
 
 pub mod compiler;
+pub mod dependency;
 pub mod library;
 pub mod redirect;
 pub mod tracking;
@@ -24,7 +25,6 @@ pub struct PackCompiler<'a> {
     profile: Arc<ProfileConfig>,
     bundles: Vec<PathBuf>,
     redirects: Vec<PathBuf>,
-    library: AssetLibrary,
     tracker: Arc<AssetTracker>,
 }
 
@@ -55,7 +55,6 @@ impl<'a> PackCompiler<'a> {
             redirects_path: source_path.join("redirects"),
             resourcepack_path: minecraft_path.join("resourcepacks").join(name),
             compile_path,
-            library: Default::default(),
             tracker,
             redirects: Vec::with_capacity(build.redirects.len()),
             bundles: Vec::with_capacity(build.bundles.len()),

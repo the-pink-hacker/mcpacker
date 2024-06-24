@@ -13,7 +13,6 @@ const DEFAULT_NAMESPACE: &str = "minecraft";
 #[serde(rename_all = "snake_case")]
 pub enum AssetType {
     Model,
-    ModelPreprocessed,
     Blockstate,
     Texture,
     Atlas,
@@ -63,11 +62,7 @@ impl Identifier {
             .next()
             .map_or(None, |f| f.to_str())
             .map_or(None, |f| match f {
-                "models" => value.extension().map_or(None, |e| match e.to_str() {
-                    Some("json") => Some(AssetType::Model),
-                    Some("mcpacker") => Some(AssetType::ModelPreprocessed),
-                    _ => None,
-                }),
+                "models" => Some(AssetType::Model),
                 "blockstates" => Some(AssetType::Blockstate),
                 "textures" => value.extension().map_or(None, |e| match e.to_str() {
                     Some("png") => Some(AssetType::Texture),
@@ -95,7 +90,6 @@ impl Identifier {
     pub fn to_path(&self, asset_path: &PathBuf, asset_type: &AssetType) -> PathBuf {
         let (folder, extension) = match asset_type {
             AssetType::Model => ("models", "json"),
-            AssetType::ModelPreprocessed => ("models", "mcpacker"),
             AssetType::Blockstate => ("blockstates", "json"),
             AssetType::Texture => ("textures", "png"),
             AssetType::Atlas => ("atlases", "json"),
@@ -115,12 +109,6 @@ impl Identifier {
 
     pub fn is_minecraft(&self) -> bool {
         self.namespace == DEFAULT_NAMESPACE
-    }
-
-    pub fn is_virtual(&self) -> bool {
-        self.path.file_name().map_or(false, |file_name| {
-            Some("virtual") == file_name.to_string_lossy().split_once('#').map(|(_, f)| f)
-        })
     }
 }
 
@@ -234,13 +222,6 @@ mod tests {
     }
 
     #[test]
-    fn from_path_minecraft_model_preprocessed() {
-        let id = Identifier::minecraft("block/sponge");
-        let result = Identifier::from_path("minecraft/models/block/sponge.mcpacker").unwrap();
-        assert_eq!((AssetType::ModelPreprocessed, id), result);
-    }
-
-    #[test]
     fn from_path_minecraft_blockstate() {
         let id = Identifier::minecraft("block/sponge");
         let result = Identifier::from_path("minecraft/blockstates/block/sponge.json").unwrap();
@@ -276,29 +257,5 @@ mod tests {
         let id = Identifier::new("quark", "block/sponge");
         let result = Identifier::from_path("quark/models/block/sponge.json").unwrap();
         assert_eq!((AssetType::Model, id), result);
-    }
-
-    #[test]
-    fn virtual_asset() {
-        let (_, id) = Identifier::from_path("minecraft/models/block/dirt#virtual.json").unwrap();
-        assert!(id.is_virtual());
-    }
-
-    #[test]
-    fn real_asset() {
-        let (_, id) = Identifier::from_path("minecraft/models/block/dirt.json").unwrap();
-        assert!(!id.is_virtual());
-    }
-
-    #[test]
-    fn virtual_string_asset() {
-        let id = Identifier::from_str("minecraft:block/dirt#virtual").unwrap();
-        assert!(id.is_virtual());
-    }
-
-    #[test]
-    fn real_string_asset() {
-        let id = Identifier::from_str("minecraft:block/dirt").unwrap();
-        assert!(!id.is_virtual());
     }
 }

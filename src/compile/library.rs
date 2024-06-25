@@ -76,7 +76,7 @@ impl AssetLibrary {
         let mut compiled_models = HashMap::with_capacity(self.models.len());
 
         for model_id in model_graph {
-            if let Some((model_id, model_generic)) = self.models.remove_entry(&model_id) {
+            if let Some(model_generic) = self.models.remove(&model_id) {
                 let compiled_model = match model_generic {
                     ModelGeneric::Normal(model) => model,
                     ModelGeneric::Preprocessed(model) => model.compile(&compiled_models)?,

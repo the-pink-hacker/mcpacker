@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::bail;
-use indexmap::IndexSet;
 use topological_sort::TopologicalSort;
 
 use crate::{
@@ -11,11 +10,7 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub struct DependencyGraph<'a> {
-    id_table: IndexSet<&'a Identifier>,
-    // IDs are converted to usizes for preformance.
-    // Reduces amount of hashing.
-    // Haven't tested this since refactoring.
-    graph: TopologicalSort<usize>,
+    graph: TopologicalSort<&'a Identifier>,
 }
 
 impl<'a> DependencyGraph<'a> {
@@ -27,8 +22,7 @@ impl<'a> DependencyGraph<'a> {
                 .graph
                 .pop_all()
                 .iter()
-                .map(|i| self.index_to_id(*i))
-                .filter_map(Option::from)
+                .copied()
                 .map(Identifier::clone)
                 .collect::<Vec<_>>();
 
@@ -42,21 +36,11 @@ impl<'a> DependencyGraph<'a> {
         Ok(output)
     }
 
-    fn id_to_index(&mut self, id: &'a Identifier) -> usize {
-        let (index, _) = self.id_table.insert_full(id);
-        index
-    }
-
-    fn index_to_id(&self, index: usize) -> Option<&'a Identifier> {
-        self.id_table.get_index(index).copied()
-    }
-
     fn add_model(&mut self, id: &'a Identifier, model: &'a Model) {
-        let to = self.id_to_index(id);
-
         if let Some(parent) = &model.parent {
-            let from = self.id_to_index(parent);
-            self.graph.add_dependency(from, to);
+            self.graph.add_dependency(parent, id);
+        } else {
+            self.graph.insert(id);
         }
     }
 
@@ -69,13 +53,14 @@ impl<'a> DependencyGraph<'a> {
                 ModelOrId::Model(model) => model.parent.as_ref(),
             })
             .filter_map(Option::from)
-            .collect::<HashSet<_>>();
+            .collect::<HashSet<&Identifier>>();
 
-        let to = self.id_to_index(id);
-
-        for import in imports {
-            let from = self.id_to_index(import);
-            self.graph.add_dependency(from, to);
+        if imports.is_empty() {
+            self.graph.insert(id);
+        } else {
+            for import in imports {
+                self.graph.add_dependency(import, id);
+            }
         }
     }
 }

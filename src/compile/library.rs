@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
+use indexmap::IndexMap;
 use serde::Serialize;
 
 use crate::{
@@ -74,16 +75,26 @@ impl AssetLibrary {
         let model_graph = DependencyGraph::from(&self.models).sort()?;
 
         let mut compiled_models = HashMap::with_capacity(self.models.len());
+        let mut preprocessed_models = IndexMap::new();
 
         for model_id in model_graph {
             if let Some(model_generic) = self.models.remove(&model_id) {
-                let compiled_model = match model_generic {
-                    ModelGeneric::Normal(model) => model,
-                    ModelGeneric::Preprocessed(model) => model.compile(&compiled_models)?,
-                };
-
-                compiled_models.insert(model_id, compiled_model);
+                match model_generic {
+                    ModelGeneric::Normal(model) => {
+                        compiled_models.insert(model_id, model);
+                    }
+                    ModelGeneric::Preprocessed(model) => {
+                        preprocessed_models.insert(model_id, model);
+                    }
+                }
             }
+        }
+
+        for (preprocessed_model_id, preprocessed_model) in &preprocessed_models {
+            let compiled_model =
+                preprocessed_model.compile(&compiled_models, &preprocessed_models)?;
+
+            compiled_models.insert(preprocessed_model_id.clone(), compiled_model);
         }
 
         Ok(CompiledAssetLibrary {

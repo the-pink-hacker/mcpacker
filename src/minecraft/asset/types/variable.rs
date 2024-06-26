@@ -11,8 +11,8 @@ impl VariableIdentifier {
         Self(value)
     }
 
-    pub fn get_name(self) -> String {
-        self.0
+    pub fn get_name<'a>(&'a self) -> &'a str {
+        &self.0
     }
 }
 

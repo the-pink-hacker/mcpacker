@@ -34,17 +34,30 @@ impl LoadableAsset for ModelGeneric {
 pub struct ModelPreprocessed {
     #[serde(default)]
     pub import: HashMap<String, ModelOrId>,
-    pub composition: Vec<ModelComposition>,
+    pub composition: ModelComposition,
+    #[serde(default)]
+    is_virtual: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum ModelComposition {
+    Template(Identifier),
+    Parts(Vec<ModelPart>),
 }
 
 impl Asset for ModelPreprocessed {
     fn get_type() -> AssetType {
         AssetType::Model
     }
+
+    fn is_virtual(&self) -> bool {
+        self.is_virtual
+    }
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ModelComposition {
+pub struct ModelPart {
     model: VariableIdentifier,
     #[serde(default)]
     transformations: Vec<Transformation>,
@@ -74,29 +87,64 @@ enum Transformation {
     },
 }
 
-impl ModelComposition {
-    fn compile(
+impl ModelPreprocessed {
+    pub fn compile(
         &self,
-        model: &mut Model,
-        models: &HashMap<Identifier, Model>,
-        variables: &HashMap<String, ModelOrId>,
-    ) -> anyhow::Result<()> {
-        let variable = variables
-            .get(&self.model.clone().get_name())
-            .with_context(|| format!("Failed to locate model variable: {}", self.model))?;
-        let mut lookup_model = match variable {
+        raw_models: &HashMap<Identifier, Model>,
+        prepocessed_models: &IndexMap<Identifier, ModelPreprocessed>,
+    ) -> anyhow::Result<Model> {
+        let mut builder = ModelBuilder::new(raw_models, prepocessed_models, &self.import);
+
+        match &self.composition {
+            ModelComposition::Parts(parts) => {
+                for part in parts {
+                    builder.add_part(part)?;
+                }
+            }
+            ModelComposition::Template(template_id) => todo!(),
+        }
+
+        Ok(builder.build())
+    }
+}
+
+struct ModelBuilder<'a> {
+    raw_models: &'a HashMap<Identifier, Model>,
+    prepocessed_models: &'a IndexMap<Identifier, ModelPreprocessed>,
+    model: Model,
+    import_table: &'a HashMap<String, ModelOrId>,
+}
+
+impl<'a> ModelBuilder<'a> {
+    fn new(
+        raw_models: &'a HashMap<Identifier, Model>,
+        prepocessed_models: &'a IndexMap<Identifier, ModelPreprocessed>,
+        import_table: &'a HashMap<String, ModelOrId>,
+    ) -> Self {
+        Self {
+            raw_models,
+            prepocessed_models,
+            model: Model::default(),
+            import_table,
+        }
+    }
+
+    fn add_part(&mut self, part: &ModelPart) -> anyhow::Result<()> {
+        let model_reference = self
+            .evaluate_model_variable(&part.model)
+            .with_context(|| format!("Failed to locate model variable: {}", part.model))?;
+
+        let mut lookup_model = match model_reference {
             ModelOrId::Model(model) => model,
-            ModelOrId::Id(id) => models
-                .get(id)
-                .with_context(|| format!("Failed to locate model: {}", id))?,
+            ModelOrId::Id(id) => self.lookup_model(id)?,
         }
         .clone();
 
-        if let Some(cullface) = &self.cullface {
+        if let Some(cullface) = &part.cullface {
             lookup_model.set_cullface(cullface);
         }
 
-        for transform in &self.transformations {
+        for transform in &part.transformations {
             match transform {
                 Transformation::Rotate { x, y } => {
                     lookup_model.rotate_x(x);
@@ -106,36 +154,36 @@ impl ModelComposition {
             }
         }
 
-        for (old, new) in &self.textures {
-            lookup_model.update_texture(&VariableIdentifier::new(old.clone()), new.clone());
+        for (old_texture_id, new_texture_id) in part.textures.clone() {
+            lookup_model.update_texture(&VariableIdentifier::new(old_texture_id), new_texture_id);
         }
 
-        for element in &lookup_model.elements {
-            model.elements.push(element.clone());
+        for element in lookup_model.elements.clone() {
+            self.model.elements.push(element);
         }
 
-        for (texture_name, texture_id) in &lookup_model.textures {
-            model
-                .textures
-                .insert(texture_name.clone(), texture_id.clone());
+        for (texture_name, texture_id) in lookup_model.textures.clone() {
+            self.model.textures.insert(texture_name, texture_id);
         }
 
         if let Some(parent) = lookup_model.parent {
-            model.parent = Some(parent.clone());
+            self.model.parent = Some(parent.clone());
         }
 
         Ok(())
     }
-}
 
-impl ModelPreprocessed {
-    pub fn compile(&self, models: &HashMap<Identifier, Model>) -> anyhow::Result<Model> {
-        let mut model = Model::default();
+    fn lookup_model(&mut self, model_id: &Identifier) -> anyhow::Result<&'a Model> {
+        self.raw_models
+            .get(model_id)
+            .with_context(|| format!("Failed to lookup model: {}", model_id))
+    }
 
-        for part in &self.composition {
-            part.compile(&mut model, models, &self.import)?;
-        }
+    fn evaluate_model_variable(&self, variable: &VariableIdentifier) -> Option<&'a ModelOrId> {
+        self.import_table.get(variable.get_name())
+    }
 
-        Ok(model)
+    fn build(self) -> Model {
+        self.model
     }
 }

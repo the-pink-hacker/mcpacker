@@ -4,7 +4,7 @@ use anyhow::bail;
 use topological_sort::TopologicalSort;
 
 use crate::{
-    asset::model::{ModelGeneric, ModelOrId, ModelPreprocessed},
+    asset::model::{ModelComposition, ModelGeneric, ModelOrId, ModelPreprocessed},
     minecraft::asset::{model::Model, types::identifier::Identifier},
 };
 
@@ -44,7 +44,7 @@ impl<'a> DependencyGraph<'a> {
         }
     }
 
-    fn add_model_preprocessed(&mut self, id: &'a Identifier, model: &'a ModelPreprocessed) {
+    fn add_model_preprocessed(&mut self, model_id: &'a Identifier, model: &'a ModelPreprocessed) {
         let imports = model
             .import
             .values()
@@ -55,11 +55,15 @@ impl<'a> DependencyGraph<'a> {
             .filter_map(Option::from)
             .collect::<HashSet<&Identifier>>();
 
-        if imports.is_empty() {
-            self.graph.insert(id);
+        if let ModelComposition::Template(template_id) = &model.composition {
+            self.graph.add_dependency(template_id, model_id);
+        } else if imports.is_empty() {
+            // There are no references to this model in the graph.
+            // Must add to graph manually.
+            self.graph.insert(model_id);
         } else {
             for import in imports {
-                self.graph.add_dependency(import, id);
+                self.graph.add_dependency(import, model_id);
             }
         }
     }

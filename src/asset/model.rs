@@ -30,16 +30,16 @@ impl LoadableAsset for ModelGeneric {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ModelPreprocessed {
     #[serde(default)]
     pub import: HashMap<String, ModelOrId>,
     pub composition: ModelComposition,
-    #[serde(default)]
+    #[serde(default, rename = "virtual")]
     is_virtual: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum ModelComposition {
     Template(Identifier),
@@ -56,7 +56,7 @@ impl Asset for ModelPreprocessed {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ModelPart {
     model: VariableIdentifier,
     #[serde(default)]
@@ -66,14 +66,14 @@ pub struct ModelPart {
     textures: IndexMap<String, VariableIdentifier>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum ModelOrId {
     Id(Identifier),
     Model(Model),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum Transformation {
     Rotate {
@@ -93,16 +93,9 @@ impl ModelPreprocessed {
         raw_models: &HashMap<Identifier, Model>,
         prepocessed_models: &IndexMap<Identifier, ModelPreprocessed>,
     ) -> anyhow::Result<Model> {
-        let mut builder = ModelBuilder::new(raw_models, prepocessed_models, &self.import);
+        let mut builder = ModelBuilder::new(raw_models, prepocessed_models, self.import.clone());
 
-        match &self.composition {
-            ModelComposition::Parts(parts) => {
-                for part in parts {
-                    builder.add_part(part)?;
-                }
-            }
-            ModelComposition::Template(template_id) => todo!(),
-        }
+        builder.add_compositon(&self.composition)?;
 
         Ok(builder.build())
     }
@@ -111,22 +104,44 @@ impl ModelPreprocessed {
 struct ModelBuilder<'a> {
     raw_models: &'a HashMap<Identifier, Model>,
     prepocessed_models: &'a IndexMap<Identifier, ModelPreprocessed>,
-    model: Model,
-    import_table: &'a HashMap<String, ModelOrId>,
+    output_model: Model,
+    import_table: HashMap<String, ModelOrId>,
 }
 
 impl<'a> ModelBuilder<'a> {
     fn new(
         raw_models: &'a HashMap<Identifier, Model>,
         prepocessed_models: &'a IndexMap<Identifier, ModelPreprocessed>,
-        import_table: &'a HashMap<String, ModelOrId>,
+        import_table: HashMap<String, ModelOrId>,
     ) -> Self {
         Self {
             raw_models,
             prepocessed_models,
-            model: Model::default(),
             import_table,
+            output_model: Model::default(),
         }
+    }
+
+    fn add_compositon(&mut self, composition: &ModelComposition) -> anyhow::Result<()> {
+        let parts = match composition {
+            ModelComposition::Parts(parts) => parts,
+            ModelComposition::Template(template_id) => self.resolve_template(template_id)?,
+        };
+
+        self.add_parts(parts)?;
+
+        Ok(())
+    }
+
+    fn add_parts<'b, P: IntoIterator<Item = &'b ModelPart>>(
+        &mut self,
+        parts: P,
+    ) -> anyhow::Result<()> {
+        for part in parts {
+            self.add_part(part)?;
+        }
+
+        Ok(())
     }
 
     fn add_part(&mut self, part: &ModelPart) -> anyhow::Result<()> {
@@ -159,31 +174,53 @@ impl<'a> ModelBuilder<'a> {
         }
 
         for element in lookup_model.elements.clone() {
-            self.model.elements.push(element);
+            self.output_model.elements.push(element);
         }
 
         for (texture_name, texture_id) in lookup_model.textures.clone() {
-            self.model.textures.insert(texture_name, texture_id);
+            self.output_model.textures.insert(texture_name, texture_id);
         }
 
         if let Some(parent) = lookup_model.parent {
-            self.model.parent = Some(parent.clone());
+            self.output_model.parent = Some(parent);
         }
 
         Ok(())
     }
 
-    fn lookup_model(&mut self, model_id: &Identifier) -> anyhow::Result<&'a Model> {
+    fn resolve_template(&mut self, template_id: &Identifier) -> anyhow::Result<&'a Vec<ModelPart>> {
+        let template = self.lookup_preprocessed_model(template_id)?;
+
+        let mut new_import_table = template.import.clone();
+        new_import_table.extend(self.import_table.clone());
+        self.import_table = new_import_table;
+
+        match &template.composition {
+            ModelComposition::Template(id) => self.resolve_template(id),
+            ModelComposition::Parts(parts) => Ok(parts),
+        }
+    }
+
+    fn lookup_model(&self, model_id: &Identifier) -> anyhow::Result<&'a Model> {
         self.raw_models
             .get(model_id)
             .with_context(|| format!("Failed to lookup model: {}", model_id))
     }
 
-    fn evaluate_model_variable(&self, variable: &VariableIdentifier) -> Option<&'a ModelOrId> {
+    fn lookup_preprocessed_model(
+        &self,
+        model_id: &Identifier,
+    ) -> anyhow::Result<&'a ModelPreprocessed> {
+        self.prepocessed_models
+            .get(model_id)
+            .with_context(|| format!("Failed to lookup prepocessed model: {}", model_id))
+    }
+
+    fn evaluate_model_variable(&'a self, variable: &VariableIdentifier) -> Option<&'a ModelOrId> {
         self.import_table.get(variable.get_name())
     }
 
     fn build(self) -> Model {
-        self.model
+        self.output_model
     }
 }

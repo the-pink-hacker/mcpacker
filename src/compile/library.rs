@@ -90,7 +90,10 @@ impl AssetLibrary {
             }
         }
 
-        for (preprocessed_model_id, preprocessed_model) in &preprocessed_models {
+        for (preprocessed_model_id, preprocessed_model) in preprocessed_models
+            .iter()
+            .filter(|(_, model)| !model.is_virtual())
+        {
             let compiled_model =
                 preprocessed_model.compile(&compiled_models, &preprocessed_models)?;
 

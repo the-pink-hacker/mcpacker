@@ -19,9 +19,9 @@ use super::{
 
 #[skip_serializing_none]
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
 pub struct Model {
     pub parent: Option<Identifier>,
+    #[serde(rename = "ambientocclusion")]
     pub ambient_occlusion: Option<bool>,
     pub display: Option<ItemDisplayPositions>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
@@ -199,7 +199,6 @@ pub enum Axis {
 
 #[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
 pub struct ElementFace {
     pub uv: Option<Vec4>,
     pub texture: VariableIdentifier,
@@ -209,7 +208,8 @@ pub struct ElementFace {
     pub rotation: StateRotation,
     #[serde(
         default = "ElementFace::default_tint_index",
-        skip_serializing_if = "ElementFace::is_default_tint_index"
+        skip_serializing_if = "ElementFace::is_default_tint_index",
+        rename = "tintindex"
     )]
     pub tint_index: i32,
 }

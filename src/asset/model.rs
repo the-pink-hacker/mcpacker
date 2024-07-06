@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use indexmap::IndexMap;
 use serde::Deserialize;
 
@@ -59,6 +59,8 @@ impl Asset for ModelPreprocessed {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ModelPart {
     model: VariableIdentifier,
+    #[serde(default)]
+    optional: bool,
     #[serde(default)]
     transformations: Vec<Transformation>,
     cullface: Option<CullDirection>,
@@ -145,9 +147,18 @@ impl<'a> ModelBuilder<'a> {
     }
 
     fn add_part(&mut self, part: &ModelPart) -> anyhow::Result<()> {
-        let model_reference = self
-            .evaluate_model_variable(&part.model)
-            .with_context(|| format!("Failed to locate model variable: {}", part.model))?;
+        let model_reference = {
+            match self.evaluate_model_variable(&part.model) {
+                Some(model_reference) => model_reference,
+                None => {
+                    if part.optional {
+                        return Ok(());
+                    } else {
+                        bail!("Failed to evaluate model variable: {}", part.model);
+                    }
+                }
+            }
+        };
 
         let mut lookup_model = match model_reference {
             ModelOrId::Model(model) => model,

@@ -1,3 +1,4 @@
+pub mod flip;
 pub mod rotate;
 pub mod translate;
 

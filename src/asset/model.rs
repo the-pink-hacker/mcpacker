@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 
 use crate::minecraft::asset::{
-    model::{rotate::Rotatable, translate::Translate, CullDirection, Model},
+    model::{flip::Flip, rotate::Rotatable, translate::Translate, Axis, CullDirection, Model},
     types::{
         identifier::{AssetType, Identifier},
         rotation::StateRotation,
@@ -86,6 +86,9 @@ enum Transformation {
     },
     Translate {
         amount: Vec3,
+    },
+    Flip {
+        axis: Axis,
     },
 }
 
@@ -177,6 +180,7 @@ impl<'a> ModelBuilder<'a> {
                     lookup_model.rotate_y(y);
                 }
                 Transformation::Translate { amount } => lookup_model.translate(amount),
+                Transformation::Flip { axis } => lookup_model.flip(axis),
             }
         }
 

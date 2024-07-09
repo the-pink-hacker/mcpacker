@@ -60,8 +60,8 @@ impl Rotatable for ModelElement {
     fn rotate_x_quarter(&mut self) {
         self.faces.rotate_x_quarter();
 
-        let (_, from_y, from_z) = self.from.into_tuple_mut();
-        let (_, to_y, to_z) = self.to.into_tuple_mut();
+        let (_, from_y, from_z) = (&mut self.from).into();
+        let (_, to_y, to_z) = (&mut self.to).into();
 
         let length_y = *to_z - *from_z;
         let length_z = *to_y - *from_y;
@@ -78,8 +78,8 @@ impl Rotatable for ModelElement {
     fn rotate_y_quarter(&mut self) {
         self.faces.rotate_y_quarter();
 
-        let (from_x, _, from_z) = self.from.into_tuple_mut();
-        let (to_x, _, to_z) = self.to.into_tuple_mut();
+        let (from_x, _, from_z) = (&mut self.from).into();
+        let (to_x, _, to_z) = (&mut self.to).into();
 
         let length_x = *to_z - *from_z;
         let length_z = *to_x - *from_x;

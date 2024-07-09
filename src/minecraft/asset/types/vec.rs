@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign};
 
-use serde::{de::Visitor, ser::SerializeSeq, Deserialize, Serialize};
+use serde::{de::Visitor, ser::SerializeTuple, Deserialize, Serialize};
 
 use crate::minecraft::serialize::FloatInt;
 
@@ -15,19 +15,23 @@ impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
-
-    pub fn into_tuple_mut<'a>(&'a mut self) -> (&'a mut f32, &'a mut f32, &'a mut f32) {
-        (&mut self.x, &mut self.y, &mut self.z)
-    }
-
-    fn into_float_int_list(self) -> [FloatInt; 3] {
-        [self.x.into(), self.y.into(), self.z.into()]
-    }
 }
 
 impl<'a> From<&'a mut Vec3> for (&'a mut f32, &'a mut f32, &'a mut f32) {
     fn from(value: &'a mut Vec3) -> Self {
-        value.into_tuple_mut()
+        (&mut value.x, &mut value.y, &mut value.z)
+    }
+}
+
+impl<'a> From<&'a Vec3> for (&'a f32, &'a f32, &'a f32) {
+    fn from(value: &'a Vec3) -> Self {
+        (&value.x, &value.y, &value.z)
+    }
+}
+
+impl From<Vec3> for (f32, f32, f32) {
+    fn from(value: Vec3) -> Self {
+        (value.x, value.y, value.z)
     }
 }
 
@@ -62,12 +66,11 @@ impl Serialize for Vec3 {
     where
         S: serde::Serializer,
     {
-        let mut sequence = serializer.serialize_seq(Some(3))?;
-        let list = self.clone().into_float_int_list();
-        for element in list {
-            sequence.serialize_element(&element)?;
-        }
-        sequence.end()
+        let mut tuple = serializer.serialize_tuple(3)?;
+        tuple.serialize_element(&FloatInt::from(self.x))?;
+        tuple.serialize_element(&FloatInt::from(self.y))?;
+        tuple.serialize_element(&FloatInt::from(self.z))?;
+        tuple.end()
     }
 }
 
@@ -95,13 +98,13 @@ impl<'de> Visitor<'de> for Vec3Visitor {
     {
         let x = seq
             .next_element()?
-            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+            .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
         let y = seq
             .next_element()?
-            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+            .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
         let z = seq
             .next_element()?
-            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+            .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
 
         Ok(Self::Value { x, y, z })
     }
@@ -114,9 +117,28 @@ pub struct Vec4 {
     pub z: f32,
 }
 
-impl Vec4 {
-    fn into_float_int_list(self) -> [FloatInt; 4] {
-        [self.w.into(), self.x.into(), self.y.into(), self.z.into()]
+impl<'a> From<&'a mut Vec4> for (&'a mut f32, &'a mut f32, &'a mut f32, &'a mut f32) {
+    fn from(value: &'a mut Vec4) -> Self {
+        (&mut value.w, &mut value.x, &mut value.y, &mut value.z)
+    }
+}
+
+impl<'a> From<&'a Vec4> for (&'a f32, &'a f32, &'a f32, &'a f32) {
+    fn from(value: &'a Vec4) -> Self {
+        (&value.w, &value.x, &value.y, &value.z)
+    }
+}
+
+impl From<Vec4> for (f32, f32, f32, f32) {
+    fn from(value: Vec4) -> Self {
+        (value.w, value.x, value.y, value.z)
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for Vec4 {
+    fn from(value: (f32, f32, f32, f32)) -> Self {
+        let (w, x, y, z) = value;
+        Self { w, x, y, z }
     }
 }
 
@@ -125,12 +147,12 @@ impl Serialize for Vec4 {
     where
         S: serde::Serializer,
     {
-        let mut sequence = serializer.serialize_seq(Some(3))?;
-        let list = self.clone().into_float_int_list();
-        for element in list {
-            sequence.serialize_element(&element)?;
-        }
-        sequence.end()
+        let mut tuple = serializer.serialize_tuple(4)?;
+        tuple.serialize_element(&FloatInt::from(self.w))?;
+        tuple.serialize_element(&FloatInt::from(self.x))?;
+        tuple.serialize_element(&FloatInt::from(self.y))?;
+        tuple.serialize_element(&FloatInt::from(self.z))?;
+        tuple.end()
     }
 }
 
@@ -158,16 +180,16 @@ impl<'de> Visitor<'de> for Vec4Visitor {
     {
         let w = seq
             .next_element()?
-            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+            .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
         let x = seq
             .next_element()?
-            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+            .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
         let y = seq
             .next_element()?
-            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+            .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
         let z = seq
             .next_element()?
-            .ok_or_else(|| serde::de::Error::custom("Failed to get next element in vec3"))?;
+            .ok_or_else(|| serde::de::Error::invalid_length(3, &self))?;
 
         Ok(Self::Value { w, x, y, z })
     }

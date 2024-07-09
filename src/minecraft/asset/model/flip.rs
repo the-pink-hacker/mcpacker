@@ -76,6 +76,13 @@ impl Flip for ElementFaces {
         let east = self.west.clone();
         self.west = self.east.clone();
         self.east = east;
+
+        if let Some(face) = &mut self.east {
+            face.flip_uv_y();
+        }
+        if let Some(face) = &mut self.west {
+            face.flip_uv_y();
+        }
     }
 
     fn flip_y(&mut self) {
@@ -95,6 +102,13 @@ impl Flip for ElementFaces {
         let up = self.down.clone();
         self.down = self.up.clone();
         self.up = up;
+
+        if let Some(face) = &mut self.up {
+            face.flip_uv_x();
+        }
+        if let Some(face) = &mut self.down {
+            face.flip_uv_x();
+        }
     }
 
     fn flip_z(&mut self) {
@@ -114,6 +128,13 @@ impl Flip for ElementFaces {
         let north = self.south.clone();
         self.south = self.north.clone();
         self.north = north;
+
+        if let Some(face) = &mut self.north {
+            face.flip_uv_x();
+        }
+        if let Some(face) = &mut self.south {
+            face.flip_uv_x();
+        }
     }
 }
 

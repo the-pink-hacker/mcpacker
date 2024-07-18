@@ -10,14 +10,15 @@ use clap::Parser;
 use cli::Args;
 use runner::Runner;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main(flavor = "multi_thread")]
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     match &args.commands {
         cli::Subcommands::Build {
             profile,
             builds,
-            listen,
+            listen: _,
         } => {
             let runner = Runner::new(
                 args.config,
@@ -26,11 +27,7 @@ fn main() -> anyhow::Result<()> {
                 profile.clone(),
             )?;
 
-            if *listen {
-                runner.start_listener()?;
-            } else {
-                runner.start_standard()?;
-            }
+            runner.start_standard().await?;
         }
     }
 

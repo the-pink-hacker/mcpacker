@@ -11,6 +11,7 @@ use self::tracking::AssetTracker;
 
 pub mod compiler;
 pub mod dependency;
+pub mod deploy;
 pub mod library;
 pub mod redirect;
 pub mod tracking;

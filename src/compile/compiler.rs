@@ -23,7 +23,7 @@ const PACK_META_NAME: &str = "pack.mcmeta";
 const PACK_ICON_NAME: &str = "pack.png";
 
 impl<'a> PackCompiler<'a> {
-    pub fn run(&mut self) {
+    pub async fn run(&mut self) {
         println!("Compiling...");
 
         let current_time = Instant::now();

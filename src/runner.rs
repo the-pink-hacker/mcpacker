@@ -1,11 +1,12 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use anyhow::Context;
-use notify::{INotifyWatcher, RecursiveMode, Watcher};
-use rayon::prelude::*;
 
 use crate::{
-    compile::{tracking::AssetTracker, PackCompiler},
+    compile::{deploy::DeployAPIContext, tracking::AssetTracker, PackCompiler},
     config::PackConfig,
     sanitize::PathSanitizer,
 };
@@ -16,6 +17,7 @@ pub struct Runner {
     minecraft_path: PathBuf,
     builds: Vec<String>,
     profile: String,
+    api_context: Arc<Mutex<DeployAPIContext>>,
 }
 
 impl Runner {
@@ -35,51 +37,19 @@ impl Runner {
             minecraft_path,
             builds,
             profile,
+            api_context: Default::default(),
         })
     }
 
-    pub fn start_standard(self) -> anyhow::Result<()> {
-        let mut compilers = self.create_compilers()?;
+    pub async fn start_standard(self) -> anyhow::Result<()> {
+        let compilers = self.create_compilers()?;
 
-        compilers.par_iter_mut().for_each(PackCompiler::run);
+        for mut compiler in compilers {
+            compiler.run().await;
+            compiler.deploy(self.api_context.as_ref()).await?;
+        }
 
         Ok(())
-    }
-
-    pub fn start_listener(self) -> anyhow::Result<()> {
-        self.listener_run();
-
-        let watcher_config = notify::Config::default().with_poll_interval(Duration::from_secs(2));
-
-        let config_path = self.config.clone();
-        let source_path = self.project_sanitizer.join("src")?;
-
-        let mut watcher: INotifyWatcher = notify::Watcher::new(
-            move |res: Result<notify::event::Event, _>| match res {
-                Ok(event) => match event.kind {
-                    notify::EventKind::Modify(_)
-                    | notify::EventKind::Create(_)
-                    | notify::EventKind::Remove(_) => self.listener_run(),
-                    _ => (),
-                },
-                Err(e) => {
-                    println!("File listener error: {}", e);
-                }
-            },
-            watcher_config,
-        )?;
-
-        watcher.watch(&config_path, RecursiveMode::NonRecursive)?;
-        watcher.watch(&source_path, RecursiveMode::Recursive)?;
-
-        loop {}
-    }
-
-    fn listener_run(&self) {
-        match self.create_compilers() {
-            Ok(mut compilers) => compilers.par_iter_mut().for_each(PackCompiler::run),
-            Err(e) => println!("Failed to create compilers: {}", e),
-        }
     }
 
     fn create_compilers(&self) -> anyhow::Result<Vec<PackCompiler>> {

@@ -1,12 +1,16 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{cell::Cell, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Context;
+use notify::{INotifyWatcher, RecursiveMode, Watcher};
+use tokio::sync::Mutex;
 
 use crate::{
     compile::{deploy::DeployAPIContext, tracking::AssetTracker, PackCompiler},
     config::PackConfig,
     sanitize::PathSanitizer,
 };
+
+static POLL_RATE: Duration = Duration::from_secs(1);
 
 pub struct Runner {
     project_sanitizer: PathSanitizer,
@@ -15,6 +19,7 @@ pub struct Runner {
     builds: Vec<String>,
     profile: String,
     api_context: Option<DeployAPIContext>,
+    changed: Arc<Mutex<Cell<bool>>>,
 }
 
 impl Runner {
@@ -35,6 +40,7 @@ impl Runner {
             builds,
             profile,
             api_context: None,
+            changed: Arc::new(Mutex::new(Cell::new(true))),
         })
     }
 
@@ -56,10 +62,11 @@ impl Runner {
             builds,
             profile,
             api_context: Some(DeployAPIContext::new(modrinth_api_token)?),
+            changed: Arc::new(Mutex::new(Cell::new(true))),
         })
     }
 
-    pub async fn run(self) -> anyhow::Result<()> {
+    pub async fn run(&'static self) -> anyhow::Result<()> {
         let compilers = self.create_compilers()?;
 
         if let Some(api_context) = &self.api_context {
@@ -74,6 +81,64 @@ impl Runner {
         }
 
         Ok(())
+    }
+
+    pub async fn spawn_run_listener(&'static self) -> anyhow::Result<()> {
+        self.spawn_file_watcher().await?;
+
+        let mut compiler_listen_interval = tokio::time::interval(POLL_RATE);
+
+        loop {
+            compiler_listen_interval.tick().await;
+
+            let mut changed = self.changed.lock().await;
+
+            if changed.get() {
+                *changed.get_mut() = false;
+                self.run().await?;
+            }
+        }
+    }
+
+    async fn spawn_file_watcher(&'static self) -> anyhow::Result<()> {
+        let watcher_config = notify::Config::default().with_compare_contents(true);
+
+        let config_path = self.config.clone();
+        let source_path = self.project_sanitizer.join("src")?;
+
+        let mut watcher: INotifyWatcher = notify::Watcher::new(
+            move |res: Result<notify::event::Event, _>| match res {
+                Ok(event) => match event.kind {
+                    notify::EventKind::Modify(_)
+                    | notify::EventKind::Create(_)
+                    | notify::EventKind::Remove(_) => {
+                        tokio::runtime::Builder::new_current_thread()
+                            .enable_all()
+                            .build()
+                            .expect("Failed to create async file watcher runtime.")
+                            .block_on(async move {
+                                *self.changed.lock().await.get_mut() = true;
+                            });
+                    }
+                    _ => (),
+                },
+                Err(e) => println!("File listener error: {}", e),
+            },
+            watcher_config,
+        )?;
+
+        watcher.watch(&config_path, RecursiveMode::NonRecursive)?;
+        watcher.watch(&source_path, RecursiveMode::Recursive)?;
+
+        tokio::spawn(async move {
+            Self::break_off_watcher(watcher).await;
+        });
+
+        Ok(())
+    }
+
+    async fn break_off_watcher(_: INotifyWatcher) {
+        loop {}
     }
 
     fn create_compilers(&self) -> anyhow::Result<Vec<PackCompiler>> {

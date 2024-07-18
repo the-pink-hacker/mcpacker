@@ -16,6 +16,18 @@ pub enum Subcommands {
         #[arg(long, short)]
         listen: bool,
     },
+    /// Builds and deploys one or many packs.
+    Deploy {
+        /// Which profile should be used to build the pack(s).
+        profile: String,
+
+        /// The pack(s) that should be built.
+        builds: Vec<String>,
+
+        /// A Modrinth API token.
+        #[arg(long)]
+        modrinth_api_token: String,
+    },
 }
 
 /// A CLI for packing and distributing Minecraft resource packs.

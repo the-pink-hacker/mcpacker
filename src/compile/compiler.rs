@@ -161,7 +161,7 @@ impl<'a> PackCompiler<'a> {
         }
     }
 
-    fn get_zip_path(path: impl Into<PathBuf>) -> PathBuf {
+    pub fn get_zip_path(path: impl Into<PathBuf>) -> PathBuf {
         let mut path = path.into();
         path.as_mut_os_string().push(".zip");
         path

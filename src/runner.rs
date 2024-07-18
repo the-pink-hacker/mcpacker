@@ -1,7 +1,4 @@
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 
@@ -17,11 +14,11 @@ pub struct Runner {
     minecraft_path: PathBuf,
     builds: Vec<String>,
     profile: String,
-    api_context: Arc<Mutex<DeployAPIContext>>,
+    api_context: Option<DeployAPIContext>,
 }
 
 impl Runner {
-    pub fn new(
+    pub fn build(
         config: PathBuf,
         minecraft_path: PathBuf,
         builds: Vec<String>,
@@ -37,16 +34,43 @@ impl Runner {
             minecraft_path,
             builds,
             profile,
-            api_context: Default::default(),
+            api_context: None,
         })
     }
 
-    pub async fn start_standard(self) -> anyhow::Result<()> {
+    pub fn deploy(
+        config: PathBuf,
+        minecraft_path: PathBuf,
+        builds: Vec<String>,
+        profile: String,
+        modrinth_api_token: &str,
+    ) -> anyhow::Result<Self> {
+        let project_sanitizer = config
+            .parent()
+            .with_context(|| format!("Failed to get project path at: {}", config.display()))?
+            .try_into()?;
+        Ok(Self {
+            project_sanitizer,
+            config,
+            minecraft_path,
+            builds,
+            profile,
+            api_context: Some(DeployAPIContext::new(modrinth_api_token)?),
+        })
+    }
+
+    pub async fn run(self) -> anyhow::Result<()> {
         let compilers = self.create_compilers()?;
 
-        for mut compiler in compilers {
-            compiler.run().await;
-            compiler.deploy(self.api_context.as_ref()).await?;
+        if let Some(api_context) = &self.api_context {
+            for mut compiler in compilers {
+                compiler.run().await;
+                compiler.deploy(api_context).await?;
+            }
+        } else {
+            for mut compiler in compilers {
+                compiler.run().await;
+            }
         }
 
         Ok(())

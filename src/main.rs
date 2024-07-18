@@ -7,7 +7,7 @@ pub mod runner;
 pub mod sanitize;
 
 use clap::Parser;
-use cli::Args;
+use cli::{Args, Subcommands};
 use runner::Runner;
 
 #[tokio::main(flavor = "multi_thread")]
@@ -15,21 +15,34 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     match &args.commands {
-        cli::Subcommands::Build {
+        Subcommands::Build {
             profile,
             builds,
             listen: _,
         } => {
-            let runner = Runner::new(
+            Runner::build(
                 args.config,
                 args.minecraft,
                 builds.to_vec(),
                 profile.clone(),
-            )?;
-
-            runner.start_standard().await?;
+            )?
+            .run()
+            .await
+        }
+        Subcommands::Deploy {
+            profile,
+            builds,
+            modrinth_api_token,
+        } => {
+            Runner::deploy(
+                args.config,
+                args.minecraft,
+                builds.to_vec(),
+                profile.clone(),
+                &modrinth_api_token,
+            )?
+            .run()
+            .await
         }
     }
-
-    Ok(())
 }

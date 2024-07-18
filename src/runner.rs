@@ -2,7 +2,7 @@ use std::{cell::Cell, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use notify::{INotifyWatcher, RecursiveMode, Watcher};
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, task::JoinSet};
 
 use crate::{
     compile::{deploy::DeployAPIContext, tracking::AssetTracker, PackCompiler},
@@ -70,13 +70,18 @@ impl Runner {
         let compilers = self.create_compilers()?;
 
         if let Some(api_context) = &self.api_context {
-            for mut compiler in compilers {
-                compiler.run().await;
-                compiler.deploy(api_context).await?;
+            for compiler in compilers {
+                compiler.run().await.deploy(api_context).await?;
             }
         } else {
-            for mut compiler in compilers {
-                compiler.run().await;
+            let mut set = JoinSet::new();
+
+            for compiler in compilers {
+                set.spawn(compiler.run());
+            }
+
+            while let Some(res) = set.join_next().await {
+                res?;
             }
         }
 

@@ -1,4 +1,4 @@
-use std::{cell::Cell, path::PathBuf, sync::Arc, time::Duration};
+use std::{cell::Cell, collections::BTreeSet, path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use notify::{INotifyWatcher, RecursiveMode, Watcher};
@@ -164,8 +164,9 @@ impl Runner {
 
         let mut compilers = Vec::with_capacity(self.builds.len());
         let profile = config.get_profile(&self.profile)?;
+        let builds = self.filter_build_list(&config);
 
-        for build_name in &self.builds {
+        for build_name in builds {
             let build = config.get_build(build_name)?.clone();
             let pack = config.condence_packs(&build.pack, &profile.pack);
             let compiler = PackCompiler::new(
@@ -180,5 +181,15 @@ impl Runner {
         }
 
         Ok(compilers)
+    }
+
+    fn filter_build_list<'a>(&'a self, config: &'a PackConfig) -> BTreeSet<&'a String> {
+        let mut list = BTreeSet::from_iter(self.builds.iter());
+
+        if list.contains(&"ALL".to_string()) {
+            list = BTreeSet::from_iter(config.build.keys());
+        }
+
+        list
     }
 }

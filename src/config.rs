@@ -151,9 +151,9 @@ pub struct RedirectFile {
 #[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct PackConfig {
-    pack: PackMetaConfig,
-    profile: HashMap<String, ProfileConfig>,
-    build: HashMap<String, CollectionConfig>,
+    pub pack: PackMetaConfig,
+    pub profile: HashMap<String, ProfileConfig>,
+    pub build: HashMap<String, CollectionConfig>,
 }
 
 impl PackConfig {

@@ -9,7 +9,10 @@ use std::{
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use crate::{compile::redirect::Redirect, minecraft::asset::types::text::RawText};
+use crate::{
+    asset::zfighting::ZFightingModifier, compile::redirect::Redirect,
+    minecraft::asset::types::text::RawText,
+};
 
 use self::export::{ExportOutputType, ExportRelocation, JsonExportType};
 
@@ -74,6 +77,8 @@ pub struct PackMetaConfig {
     pub icon: Option<PathBuf>,
     pub license: Option<PathBuf>,
     pub modrinth_project_id: Option<String>,
+    pub seed: Option<u64>,
+    pub zfighting_modifiers: Option<Vec<ZFightingModifier>>,
 }
 
 impl PackMetaConfig {
@@ -99,6 +104,12 @@ impl PackMetaConfig {
                 global.modrinth_project_id,
                 build.modrinth_project_id,
                 profile.modrinth_project_id,
+            ),
+            seed: Self::condence_option(global.seed, build.seed, profile.seed),
+            zfighting_modifiers: Self::condence_option(
+                global.zfighting_modifiers,
+                build.zfighting_modifiers,
+                profile.zfighting_modifiers,
             ),
         }
     }

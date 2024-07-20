@@ -104,6 +104,56 @@ pub struct ModelElement {
     faces: ElementFaces,
 }
 
+impl ModelElement {
+    #[inline]
+    pub fn north_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+        (&mut self.from.z, FaceNormal::Negative)
+    }
+
+    #[inline]
+    pub fn east_mut<'a>(&'a mut self) -> (&'a mut f32, FaceNormal) {
+        (&mut self.to.x, FaceNormal::Positive)
+    }
+
+    #[inline]
+    pub fn south_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+        (&mut self.to.z, FaceNormal::Positive)
+    }
+
+    #[inline]
+    pub fn west_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+        (&mut self.from.x, FaceNormal::Negative)
+    }
+
+    #[inline]
+    pub fn up_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+        (&mut self.from.y, FaceNormal::Negative)
+    }
+
+    #[inline]
+    pub fn down_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+        (&mut self.to.y, FaceNormal::Positive)
+    }
+
+    pub fn within_cube(&self) -> bool {
+        let (from_x, from_y, from_z) = (&self.from).into();
+        let (to_x, to_y, to_z) = (&self.to).into();
+
+        *from_x >= 0.0
+            && *from_y >= 0.0
+            && *from_z >= 0.0
+            && *to_x <= 16.0
+            && *to_y <= 16.0
+            && *to_z <= 16.0
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum FaceNormal {
+    Positive = 1,
+    Negative = -1,
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct ElementFaces {

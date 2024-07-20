@@ -13,6 +13,8 @@ ferinth = { git = "https://github.com/the-pink-hacker/ferinth.git", rev = "d7893
 indexmap = { version = "2.2.6", features = ["serde"] }
 notify = "6.1.1"
 path-clean = "1.0.1"
+rand = "0.8.5"
+rand_pcg = "0.3.1"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"
 serde_with = "3.8.1"

@@ -71,7 +71,7 @@ impl AssetLibrary {
         Ok(())
     }
 
-    pub fn compile(mut self) -> anyhow::Result<CompiledAssetLibrary> {
+    pub fn compile(mut self, compiler: &mut PackCompiler) -> anyhow::Result<CompiledAssetLibrary> {
         let model_graph = DependencyGraph::from(&self.models).sort()?;
 
         let mut compiled_models = HashMap::with_capacity(self.models.len());
@@ -98,6 +98,12 @@ impl AssetLibrary {
                 preprocessed_model.compile(&compiled_models, &preprocessed_models)?;
 
             compiled_models.insert(preprocessed_model_id.clone(), compiled_model);
+        }
+
+        if let Some(zfighting_modifiers) = &compiler.pack.zfighting_modifiers {
+            compiled_models
+                .values_mut()
+                .for_each(|model| model.apply_zfighting(zfighting_modifiers, &mut compiler.rand));
         }
 
         Ok(CompiledAssetLibrary {

@@ -50,7 +50,7 @@ impl<'a> PackCompiler<'a> {
     }
 
     fn run_failable(&mut self) -> anyhow::Result<()> {
-        let mut library = self.populate_asset_library()?.compile()?;
+        let mut library = self.populate_asset_library()?.compile(self)?;
 
         self.process_redirects(&mut library)?;
 

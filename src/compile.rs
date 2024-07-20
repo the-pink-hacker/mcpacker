@@ -1,6 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
+use rand::SeedableRng;
+use rand_pcg::Mcg128Xsl64;
 
 use crate::{
     config::{CollectionConfig, PackMetaConfig, ProfileConfig},
@@ -27,6 +29,7 @@ pub struct PackCompiler<'a> {
     bundles: Vec<PathBuf>,
     redirects: Vec<PathBuf>,
     tracker: Arc<AssetTracker>,
+    pub rand: Mcg128Xsl64,
 }
 
 impl<'a> PackCompiler<'a> {
@@ -50,6 +53,7 @@ impl<'a> PackCompiler<'a> {
 
         let mut compiler = Self {
             project_sanitizer,
+            rand: Mcg128Xsl64::seed_from_u64(pack.seed.unwrap_or_default()),
             pack,
             profile,
             bundles_path: source_path.join("bundles"),

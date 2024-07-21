@@ -5,6 +5,7 @@ use notify::{INotifyWatcher, RecursiveMode, Watcher};
 use tokio::{sync::Mutex, task::JoinSet};
 
 use crate::{
+    changelog::Changelog,
     compile::{deploy::DeployAPIContext, tracking::AssetTracker, PackCompiler},
     config::PackConfig,
     sanitize::PathSanitizer,
@@ -70,8 +71,10 @@ impl Runner {
         let compilers = self.create_compilers()?;
 
         if let Some(api_context) = &self.api_context {
+            let changelog = Changelog::new()?.collect_changelog().await?;
+
             for compiler in compilers {
-                compiler.run().await.deploy(api_context).await?;
+                compiler.run().await.deploy(api_context, &changelog).await?;
             }
         } else {
             let mut set = JoinSet::new();

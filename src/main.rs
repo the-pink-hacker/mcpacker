@@ -1,4 +1,5 @@
 pub mod asset;
+pub mod changelog;
 pub mod cli;
 pub mod compile;
 pub mod config;

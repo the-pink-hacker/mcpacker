@@ -27,7 +27,11 @@ impl DeployAPIContext {
 }
 
 impl<'a> PackCompiler<'a> {
-    pub async fn deploy(&self, api_context: &DeployAPIContext) -> anyhow::Result<()> {
+    pub async fn deploy(
+        &self,
+        api_context: &DeployAPIContext,
+        changelog: impl AsRef<str>,
+    ) -> anyhow::Result<()> {
         if self.profile.output_type == ExportOutputType::Zip {
             let zip_path = Self::get_zip_path(&self.compile_path);
             let zip_name = zip_path
@@ -41,7 +45,8 @@ impl<'a> PackCompiler<'a> {
                 .to_string_lossy()
                 .to_string();
             let file_contents = std::fs::read(zip_path)?;
-            let version_meta = self.as_modrinth_version(zip_name.clone())?;
+            let version_meta =
+                self.as_modrinth_version(zip_name.clone(), changelog.as_ref().to_string())?;
             let response = api_context
                 .modrinth
                 .create_version(&version_meta, vec![(zip_name, file_contents)])
@@ -53,11 +58,15 @@ impl<'a> PackCompiler<'a> {
         Ok(())
     }
 
-    pub fn as_modrinth_version(&self, file_name: String) -> anyhow::Result<CreateVersion> {
+    pub fn as_modrinth_version(
+        &self,
+        file_name: String,
+        changelog: String,
+    ) -> anyhow::Result<CreateVersion> {
         Ok(CreateVersion {
             name: "API TEST".to_string(),
             version_number: "test2".to_string(),
-            changelog: Some("# **this is an API test**".to_string()),
+            changelog: Some(changelog),
             dependencies: vec![],
             game_versions: vec!["1.9".to_string()],
             version_type: VersionType::Alpha,

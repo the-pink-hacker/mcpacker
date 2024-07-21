@@ -8,6 +8,8 @@ license = "MIT"
 
 [dependencies]
 anyhow = "1.0.81"
+async-fs = "2.1.2"
+async-process = "2.2.3"
 clap = { version = "4.5.4", features = ["derive", "string"] }
 ferinth = { git = "https://github.com/the-pink-hacker/ferinth.git", rev = "d7893136a8550b2a85a7ceb1ea82fe590eabee47" }
 indexmap = { version = "2.2.6", features = ["serde"] }
@@ -20,6 +22,7 @@ serde_json = "1.0.115"
 serde_with = "3.8.1"
 shellexpand = { version = "3.1.0", features = ["path"] }
 symlink = "0.1.0"
+tempfile = "3.10.1"
 tokio = { version = "1.38.1", features = ["macros", "rt-multi-thread", "sync"] }
 toml = "0.8.12"
 topological-sort = "0.2.2"

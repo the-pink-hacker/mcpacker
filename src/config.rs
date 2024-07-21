@@ -7,7 +7,9 @@ use std::{
 };
 
 use anyhow::Context;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, OneOrMany};
 
 use crate::{
     asset::zfighting::ZFightingModifier, compile::redirect::Redirect,
@@ -144,14 +146,20 @@ pub struct ProfileConfig {
     pub pack: PackMetaConfig,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct CollectionConfig {
     pub pack: PackMetaConfig,
+    #[serde_as(as = "OneOrMany<_>")]
     #[serde(default)]
     pub bundles: Vec<PathBuf>,
+    #[serde_as(as = "OneOrMany<_>")]
     #[serde(default)]
     pub redirects: Vec<PathBuf>,
+    #[serde_as(as = "OneOrMany<_>")]
+    #[serde(default)]
+    pub minecraft_versions: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -164,7 +172,7 @@ pub struct RedirectFile {
 pub struct PackConfig {
     pub pack: PackMetaConfig,
     pub profile: HashMap<String, ProfileConfig>,
-    pub build: HashMap<String, CollectionConfig>,
+    pub build: IndexMap<String, CollectionConfig>,
 }
 
 impl PackConfig {

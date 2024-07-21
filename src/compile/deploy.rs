@@ -28,7 +28,7 @@ impl DeployAPIContext {
 
 impl<'a> PackCompiler<'a> {
     pub async fn deploy(
-        &self,
+        self,
         api_context: &DeployAPIContext,
         changelog: impl AsRef<str>,
     ) -> anyhow::Result<()> {
@@ -59,7 +59,7 @@ impl<'a> PackCompiler<'a> {
     }
 
     pub fn as_modrinth_version(
-        &self,
+        self,
         file_name: String,
         changelog: String,
     ) -> anyhow::Result<CreateVersion> {
@@ -68,16 +68,15 @@ impl<'a> PackCompiler<'a> {
             version_number: "test2".to_string(),
             changelog: Some(changelog),
             dependencies: vec![],
-            game_versions: vec!["1.9".to_string()],
+            game_versions: self.minecraft_versions,
             version_type: VersionType::Alpha,
             loaders: vec!["minecraft".to_string()],
-            featured: false,
+            featured: true,
             status: Some(Status::Listed),
             requested_status: Some(RequestedStatus::Listed),
             project_id: self
                 .pack
                 .modrinth_project_id
-                .clone()
                 .context("Missing pack field `modrinth_project_id` from pack.toml.")?,
             file_parts: vec![file_name],
             primary_file: None,

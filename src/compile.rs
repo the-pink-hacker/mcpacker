@@ -29,6 +29,7 @@ pub struct PackCompiler<'a> {
     bundles: Vec<PathBuf>,
     redirects: Vec<PathBuf>,
     tracker: Arc<AssetTracker>,
+    minecraft_versions: Vec<String>,
     pub rand: Mcg128Xsl64,
 }
 
@@ -63,6 +64,7 @@ impl<'a> PackCompiler<'a> {
             tracker,
             redirects: Vec::with_capacity(build.redirects.len()),
             bundles: Vec::with_capacity(build.bundles.len()),
+            minecraft_versions: build.minecraft_versions,
         };
 
         for bundle in build.bundles {

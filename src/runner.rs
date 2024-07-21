@@ -170,6 +170,7 @@ impl Runner {
         let builds = self.filter_build_list(&config);
 
         for build_name in builds {
+            println!("{}", build_name);
             let build = config.get_build(build_name)?.clone();
             let pack = config.condence_packs(&build.pack, &profile.pack);
             let compiler = PackCompiler::new(

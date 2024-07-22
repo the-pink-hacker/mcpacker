@@ -83,7 +83,7 @@ impl AssetLibrary {
             if let Some(model_generic) = self.models.remove(&model_id) {
                 match model_generic {
                     ModelGeneric::Normal(model) => {
-                        compiled_models.insert(model_id, model);
+                        compiled_models.insert(model_id, *model);
                     }
                     ModelGeneric::Preprocessed(model) => {
                         preprocessed_models.insert(model_id, model);

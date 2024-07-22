@@ -58,7 +58,7 @@ impl<'a> PackCompiler<'a> {
         self.compile_icon().await?;
         self.compile_license().await?;
 
-        library.write_contents(&self).await?;
+        library.write_contents(self).await?;
 
         self.output().await?;
         self.relocate()?;

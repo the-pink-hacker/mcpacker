@@ -45,11 +45,9 @@ impl Model {
 
     pub fn update_texture(&mut self, old: &VariableIdentifier, new: VariableIdentifier) {
         for element in &mut self.elements {
-            for face in &mut element.faces {
-                if let Some(face) = face {
-                    if face.texture == *old {
-                        face.texture = new.clone();
-                    }
+            for face in (&mut element.faces).into_iter().flatten() {
+                if face.texture == *old {
+                    face.texture = new.clone();
                 }
             }
         }
@@ -106,32 +104,32 @@ pub struct ModelElement {
 
 impl ModelElement {
     #[inline]
-    pub fn north_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+    pub fn north_mut(&mut self) -> (&mut f32, FaceNormal) {
         (&mut self.from.z, FaceNormal::Negative)
     }
 
     #[inline]
-    pub fn east_mut<'a>(&'a mut self) -> (&'a mut f32, FaceNormal) {
+    pub fn east_mut(&mut self) -> (&mut f32, FaceNormal) {
         (&mut self.to.x, FaceNormal::Positive)
     }
 
     #[inline]
-    pub fn south_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+    pub fn south_mut(&mut self) -> (&mut f32, FaceNormal) {
         (&mut self.to.z, FaceNormal::Positive)
     }
 
     #[inline]
-    pub fn west_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+    pub fn west_mut(&mut self) -> (&mut f32, FaceNormal) {
         (&mut self.from.x, FaceNormal::Negative)
     }
 
     #[inline]
-    pub fn up_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+    pub fn up_mut(&mut self) -> (&mut f32, FaceNormal) {
         (&mut self.from.y, FaceNormal::Negative)
     }
 
     #[inline]
-    pub fn down_mut<'a>(&'a mut self) -> (&mut f32, FaceNormal) {
+    pub fn down_mut(&mut self) -> (&mut f32, FaceNormal) {
         (&mut self.to.y, FaceNormal::Positive)
     }
 
@@ -167,10 +165,8 @@ pub struct ElementFaces {
 
 impl ElementFaces {
     pub fn set_cullface(&mut self, value: &CullDirection) {
-        for face in self {
-            if let Some(face) = face {
-                face.cullface = value.clone();
-            }
+        for face in self.into_iter().flatten() {
+            face.cullface = value.clone();
         }
     }
 

@@ -73,9 +73,7 @@ impl Flip for ElementFaces {
             face.flip_uv_x();
         }
 
-        let east = self.west.clone();
-        self.west = self.east.clone();
-        self.east = east;
+        std::mem::swap(&mut self.west, &mut self.east);
 
         if let Some(face) = &mut self.east {
             face.flip_uv_y();
@@ -99,9 +97,7 @@ impl Flip for ElementFaces {
             face.flip_uv_y();
         }
 
-        let up = self.down.clone();
-        self.down = self.up.clone();
-        self.up = up;
+        std::mem::swap(&mut self.down, &mut self.up);
 
         if let Some(face) = &mut self.up {
             face.flip_uv_x();
@@ -125,9 +121,7 @@ impl Flip for ElementFaces {
             face.flip_uv_y();
         }
 
-        let north = self.south.clone();
-        self.south = self.north.clone();
-        self.north = north;
+        std::mem::swap(&mut self.south, &mut self.north);
 
         if let Some(face) = &mut self.north {
             face.flip_uv_x();
@@ -145,14 +139,10 @@ impl ElementFace {
 
             match self.rotation {
                 StateRotation::Degrees0 | StateRotation::Degrees180 => {
-                    let x2_new = *x1;
-                    *x1 = *x2;
-                    *x2 = x2_new;
+                    std::mem::swap(x1, x2);
                 }
                 StateRotation::Degrees90 | StateRotation::Degrees270 => {
-                    let y2_new = *y1;
-                    *y1 = *y2;
-                    *y2 = y2_new;
+                    std::mem::swap(y1, y2);
                 }
             }
         }
@@ -164,14 +154,10 @@ impl ElementFace {
 
             match self.rotation {
                 StateRotation::Degrees90 | StateRotation::Degrees270 => {
-                    let x2_new = *x1;
-                    *x1 = *x2;
-                    *x2 = x2_new;
+                    std::mem::swap(x1, x2);
                 }
                 StateRotation::Degrees0 | StateRotation::Degrees180 => {
-                    let y2_new = *y1;
-                    *y1 = *y2;
-                    *y2 = y2_new;
+                    std::mem::swap(y1, y2);
                 }
             }
         }

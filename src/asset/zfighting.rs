@@ -48,10 +48,8 @@ impl Model {
 
 impl ModelElement {
     fn apply_zfighting_modifier(&mut self, modifier: &ZFightingModifier, offset: f32) {
-        if modifier.cube_check {
-            if self.within_cube() {
-                return;
-            }
+        if modifier.cube_check && self.within_cube() {
+            return;
         }
 
         let (face_position, face_normal) = match modifier.direction {

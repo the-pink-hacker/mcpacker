@@ -97,9 +97,9 @@ impl Rotatable for ModelElement {
 impl Rotatable for ElementFaces {
     fn rotate_x_quarter(&mut self) {
         let temp = self.down.clone();
-        self.down = self.south.clone();
-        self.south = self.up.clone();
-        self.up = self.north.clone();
+        self.down.clone_from(&self.south);
+        self.south.clone_from(&self.up);
+        self.up.clone_from(&self.north);
         self.north = temp;
 
         if let Some(face) = &mut self.north {
@@ -142,9 +142,9 @@ impl Rotatable for ElementFaces {
 
     fn rotate_y_quarter(&mut self) {
         let temp = self.west.clone();
-        self.west = self.north.clone();
-        self.north = self.east.clone();
-        self.east = self.south.clone();
+        self.west.clone_from(&self.north);
+        self.north.clone_from(&self.east);
+        self.east.clone_from(&self.south);
         self.south = temp;
 
         if let Some(face) = &mut self.north {

@@ -33,7 +33,7 @@ impl Identifier {
 
         if let Ok(path) = self.path.strip_prefix(&redirect.from.path) {
             self.path = redirect.to.path.join(path);
-            self.namespace = redirect.to.namespace.clone();
+            self.namespace.clone_from(&redirect.to.namespace);
         }
     }
 }

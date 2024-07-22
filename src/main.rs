@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
                         args.minecraft,
                         builds.to_vec(),
                         profile.clone(),
-                        &modrinth_api_token,
+                        modrinth_api_token,
                     )
                 })
                 .await?

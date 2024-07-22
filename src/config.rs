@@ -34,20 +34,12 @@ pub enum FormatType {
 impl FormatType {
     pub fn min(&self) -> u8 {
         match self {
-            Self::Single(format) => format.clone(),
+            Self::Single(format) => *format,
             Self::Range {
                 minimum,
                 maximum: _,
-            } => minimum.clone(),
-            Self::List(formats) => formats.first().expect("Format list was empty.").clone(),
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        match self {
-            Self::Single(_) => 1,
-            Self::Range { minimum, maximum } => (maximum - minimum) as usize,
-            Self::List(formats) => formats.len(),
+            } => *minimum,
+            Self::List(formats) => *formats.first().expect("Format list was empty."),
         }
     }
 

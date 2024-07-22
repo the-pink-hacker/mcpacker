@@ -21,7 +21,7 @@ use super::LoadableAsset;
 #[serde(untagged)]
 pub enum ModelGeneric {
     Preprocessed(ModelPreprocessed),
-    Normal(Model),
+    Normal(Box<Model>),
 }
 
 impl LoadableAsset for ModelGeneric {
@@ -72,7 +72,7 @@ pub struct ModelPart {
 #[serde(untagged)]
 pub enum ModelOrId {
     Id(Identifier),
-    Model(Model),
+    Model(Box<Model>),
 }
 
 #[derive(Debug, Deserialize, Clone)]

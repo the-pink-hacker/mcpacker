@@ -48,23 +48,20 @@ impl Identifier {
         let value = value.as_ref();
         let mut path_list = value.iter();
 
-        let namespace = path_list
-            .next()
-            .map_or(None, |f| f.to_str())
-            .with_context(|| {
-                format!(
-                    "Failed to parse namespace from path: {}",
-                    value.to_string_lossy()
-                )
-            })?;
+        let namespace = path_list.next().and_then(|f| f.to_str()).with_context(|| {
+            format!(
+                "Failed to parse namespace from path: {}",
+                value.to_string_lossy()
+            )
+        })?;
 
         let asset_type = path_list
             .next()
-            .map_or(None, |f| f.to_str())
-            .map_or(None, |f| match f {
+            .and_then(|f| f.to_str())
+            .and_then(|f| match f {
                 "models" => Some(AssetType::Model),
                 "blockstates" => Some(AssetType::Blockstate),
-                "textures" => value.extension().map_or(None, |e| match e.to_str() {
+                "textures" => value.extension().and_then(|e| match e.to_str() {
                     Some("png") => Some(AssetType::Texture),
                     Some("mcmeta") => Some(AssetType::TextureMeta),
                     _ => None,
@@ -87,7 +84,7 @@ impl Identifier {
         Ok((asset_type, Identifier::new(namespace, asset_path)))
     }
 
-    pub fn to_path(&self, asset_path: &PathBuf, asset_type: &AssetType) -> PathBuf {
+    pub fn to_path(&self, asset_path: &Path, asset_type: &AssetType) -> PathBuf {
         let (folder, extension) = match asset_type {
             AssetType::Model => ("models", "json"),
             AssetType::Blockstate => ("blockstates", "json"),
@@ -120,7 +117,7 @@ impl FromStr for Identifier {
             bail!("Can't parse identifier; variable detected.");
         }
 
-        let (namespace, path) = s.split_once(":").unwrap_or_else(|| (DEFAULT_NAMESPACE, s));
+        let (namespace, path) = s.split_once(':').unwrap_or((DEFAULT_NAMESPACE, s));
         Ok(Identifier::new(namespace, path))
     }
 }

@@ -145,8 +145,9 @@ impl Runner {
         Ok(())
     }
 
+    // Prevents the watcher from being dropped
     async fn break_off_watcher(_: INotifyWatcher) {
-        loop {}
+        std::future::pending().await
     }
 
     fn create_compilers(&self) -> anyhow::Result<Vec<PackCompiler>> {

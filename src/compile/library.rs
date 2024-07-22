@@ -103,9 +103,11 @@ impl AssetLibrary {
         }
 
         if let Some(zfighting_modifiers) = &compiler.pack.zfighting_modifiers {
-            compiled_models
-                .values_mut()
-                .for_each(|model| model.apply_zfighting(zfighting_modifiers, &mut compiler.rand));
+            if !zfighting_modifiers.is_empty() {
+                compiled_models.values_mut().for_each(|model| {
+                    model.apply_zfighting(zfighting_modifiers, &mut compiler.rand)
+                });
+            }
         }
 
         Ok(CompiledAssetLibrary {

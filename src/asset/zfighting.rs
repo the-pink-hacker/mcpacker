@@ -17,6 +17,7 @@ pub enum Direction {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ZFightingModifier {
     pub direction: Direction,
+    #[serde(default)]
     pub cube_check: bool,
     pub offset: f32,
     #[serde(default)]

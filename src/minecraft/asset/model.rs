@@ -125,12 +125,12 @@ impl ModelElement {
 
     #[inline]
     pub fn up_mut(&mut self) -> (&mut f32, FaceNormal) {
-        (&mut self.from.y, FaceNormal::Negative)
+        (&mut self.to.y, FaceNormal::Positive)
     }
 
     #[inline]
     pub fn down_mut(&mut self) -> (&mut f32, FaceNormal) {
-        (&mut self.to.y, FaceNormal::Positive)
+        (&mut self.from.y, FaceNormal::Negative)
     }
 
     pub fn within_cube(&self) -> bool {

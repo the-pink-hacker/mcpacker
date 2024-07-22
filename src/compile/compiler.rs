@@ -1,13 +1,12 @@
 use std::{
-    fs::File,
-    io::Write,
-    io::{self, Read},
     path::{Path, PathBuf},
     time::Instant,
 };
 
+use async_fs::File;
+use async_zip::{base::write::ZipFileWriter, Compression, ZipEntryBuilder};
+use futures_lite::{AsyncReadExt, AsyncWriteExt};
 use walkdir::WalkDir;
-use zip::{write::SimpleFileOptions, ZipWriter};
 
 use crate::{
     config::{
@@ -28,7 +27,7 @@ impl<'a> PackCompiler<'a> {
 
         let current_time = Instant::now();
 
-        match self.run_failable() {
+        match self.run_failable().await {
             Ok(_) => {
                 let time_passed = current_time.elapsed();
                 println!("Completed in {:.2} seconds.", time_passed.as_secs_f32());
@@ -49,27 +48,30 @@ impl<'a> PackCompiler<'a> {
             .sanitize(self.redirects_path.join(redirect).with_extension("toml"))
     }
 
-    fn run_failable(&mut self) -> anyhow::Result<()> {
-        let mut library = self.populate_asset_library()?.compile(self)?;
+    async fn run_failable(&mut self) -> anyhow::Result<()> {
+        let mut library = self.populate_asset_library().await?.compile(self)?;
 
-        self.process_redirects(&mut library)?;
+        self.process_redirects(&mut library).await?;
 
-        self.setup_compile_path()?;
-        self.compile_meta()?;
-        self.compile_icon()?;
-        self.compile_license()?;
+        self.setup_compile_path().await?;
+        self.compile_meta().await?;
+        self.compile_icon().await?;
+        self.compile_license().await?;
 
-        library.write_contents(&self)?;
+        library.write_contents(&self).await?;
 
-        self.output()?;
+        self.output().await?;
         self.relocate()?;
 
         Ok(())
     }
 
-    fn process_redirects(&mut self, library: &mut CompiledAssetLibrary) -> anyhow::Result<()> {
+    async fn process_redirects(
+        &mut self,
+        library: &mut CompiledAssetLibrary,
+    ) -> anyhow::Result<()> {
         for redirect_path in &self.redirects {
-            let raw = std::fs::read_to_string(self.get_redirect_path(redirect_path)?)?;
+            let raw = async_fs::read_to_string(self.get_redirect_path(redirect_path)?).await?;
             let redirect = toml::from_str::<RedirectFile>(&raw)?.redirect;
 
             match redirect.asset_type {
@@ -85,41 +87,44 @@ impl<'a> PackCompiler<'a> {
         Ok(())
     }
 
-    fn setup_compile_path(&self) -> std::io::Result<()> {
+    async fn setup_compile_path(&self) -> std::io::Result<()> {
         if self.compile_path.exists() {
-            std::fs::remove_dir_all(&self.compile_path)?;
+            async_fs::remove_dir_all(&self.compile_path).await?;
         }
 
-        std::fs::create_dir_all(&self.compile_path)?;
+        async_fs::create_dir_all(&self.compile_path).await?;
         Ok(())
     }
 
-    fn compile_meta(&self) -> anyhow::Result<()> {
+    async fn compile_meta(&self) -> anyhow::Result<()> {
         let meta = PackMCMeta::from(&self.pack);
         let raw = self.profile.json_type.to_string(&meta)?;
-        let mut file = File::create(&self.compile_path.join(PACK_META_NAME))?;
-        file.write_all(raw.as_bytes())?;
+        let mut file = File::create(&self.compile_path.join(PACK_META_NAME)).await?;
+        file.write_all(raw.as_bytes()).await?;
+        file.flush().await?;
 
         Ok(())
     }
 
-    fn compile_icon(&self) -> anyhow::Result<()> {
+    async fn compile_icon(&self) -> anyhow::Result<()> {
         if let Some(icon) = &self.pack.icon {
-            std::fs::copy(
+            async_fs::copy(
                 self.project_sanitizer.join(icon)?,
                 &self.compile_path.join(PACK_ICON_NAME),
-            )?;
+            )
+            .await?;
         }
         Ok(())
     }
 
-    fn compile_license(&self) -> anyhow::Result<()> {
+    async fn compile_license(&self) -> anyhow::Result<()> {
         if let Some(license) = &self.pack.license {
             let file_name = license.file_name().unwrap_or_default();
-            std::fs::copy(
+            async_fs::copy(
                 self.project_sanitizer.join(license)?,
                 &self.compile_path.join(file_name),
-            )?;
+            )
+            .await?;
         }
         Ok(())
     }
@@ -156,9 +161,9 @@ impl<'a> PackCompiler<'a> {
         Ok(())
     }
 
-    fn output(&self) -> anyhow::Result<()> {
+    async fn output(&self) -> anyhow::Result<()> {
         match self.profile.output_type {
-            ExportOutputType::Zip => self.zip(),
+            ExportOutputType::Zip => self.zip().await,
             ExportOutputType::Uncompressed => Ok(()),
         }
     }
@@ -169,12 +174,10 @@ impl<'a> PackCompiler<'a> {
         path
     }
 
-    fn zip(&self) -> anyhow::Result<()> {
+    async fn zip(&self) -> anyhow::Result<()> {
         let zip_path = Self::get_zip_path(&self.compile_path);
-        let zip_file = File::create(zip_path)?;
-        let mut zip = ZipWriter::new(zip_file);
-        let zip_options =
-            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        let zip_file = File::create(zip_path).await?;
+        let mut zip_writer = ZipFileWriter::new(zip_file);
 
         for file_path in WalkDir::new(&self.compile_path)
             .into_iter()
@@ -182,21 +185,22 @@ impl<'a> PackCompiler<'a> {
             .filter(|f| f.path().is_file())
         {
             let file_path = file_path.path().canonicalize()?;
-            let file = File::open(&file_path)?;
+            let mut file = File::open(&file_path).await?;
             let file_zip_path = file_path
                 .strip_prefix(self.compile_path.canonicalize()?)?
                 .to_str()
                 .unwrap();
 
-            zip.start_file(file_zip_path, zip_options)?;
+            let file_size = file.metadata().await?.len() as usize;
 
-            let mut buffer = Vec::new();
-            io::copy(&mut file.take(u64::MAX), &mut buffer)?;
+            let mut buffer = Vec::with_capacity(file_size);
+            file.read_to_end(&mut buffer).await?;
 
-            zip.write_all(&buffer)?;
+            let builder = ZipEntryBuilder::new(file_zip_path.into(), Compression::Deflate);
+            zip_writer.write_entry_whole(builder, &buffer).await?;
         }
 
-        zip.finish()?;
+        zip_writer.close().await?;
 
         Ok(())
     }

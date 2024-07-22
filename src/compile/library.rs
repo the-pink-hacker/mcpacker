@@ -1,11 +1,11 @@
 use std::{
     collections::HashMap,
-    fs::File,
-    io::Write,
     path::{Path, PathBuf},
 };
 
 use anyhow::{anyhow, Context};
+use async_fs::File;
+use futures_lite::AsyncWriteExt;
 use indexmap::IndexMap;
 use serde::Serialize;
 
@@ -33,7 +33,7 @@ pub struct AssetLibrary {
 }
 
 impl AssetLibrary {
-    pub fn load_asset(
+    pub async fn load_asset(
         &mut self,
         asset_path: &Path,
         asset_path_absolute: &Path,
@@ -41,30 +41,32 @@ impl AssetLibrary {
         let (asset_type, id) = Identifier::from_path(asset_path)?;
 
         match asset_type {
-            AssetType::Model => Self::load_asset_generic(id, asset_path_absolute, &mut self.models),
+            AssetType::Model => {
+                Self::load_asset_generic(id, asset_path_absolute, &mut self.models).await
+            }
             AssetType::Blockstate => {
-                Self::load_asset_generic(id, asset_path_absolute, &mut self.blockstates)
+                Self::load_asset_generic(id, asset_path_absolute, &mut self.blockstates).await
             }
             AssetType::Texture => {
                 self.textures.insert(id, asset_path_absolute.to_owned());
                 Ok(())
             }
             AssetType::Atlas => {
-                Self::load_asset_generic(id, asset_path_absolute, &mut self.atlases)
+                Self::load_asset_generic(id, asset_path_absolute, &mut self.atlases).await
             }
             AssetType::TextureMeta => {
-                Self::load_asset_generic(id, asset_path_absolute, &mut self.textures_meta)
+                Self::load_asset_generic(id, asset_path_absolute, &mut self.textures_meta).await
             }
             _ => Err(anyhow!("Asset type unsupported")),
         }
     }
 
-    fn load_asset_generic<A: LoadableAsset, P: AsRef<Path>>(
+    async fn load_asset_generic<A: LoadableAsset, P: AsRef<Path>>(
         id: Identifier,
         path: P,
         store: &mut HashMap<Identifier, A>,
     ) -> anyhow::Result<()> {
-        let raw = std::fs::read_to_string(path)?;
+        let raw = async_fs::read_to_string(path).await?;
         let parsed = A::load_asset(raw)?;
         store.insert(id, parsed);
 
@@ -117,7 +119,7 @@ impl AssetLibrary {
 }
 
 impl<'a> PackCompiler<'a> {
-    pub fn populate_asset_library(&mut self) -> anyhow::Result<AssetLibrary> {
+    pub async fn populate_asset_library(&mut self) -> anyhow::Result<AssetLibrary> {
         let tracked_files = self.tracker.condence(&self.bundles)?;
         let mut library = AssetLibrary::default();
 
@@ -128,7 +130,7 @@ impl<'a> PackCompiler<'a> {
                 .skip(1)
                 .collect::<PathBuf>();
 
-            if let Err(e) = library.load_asset(&asset_path, &file) {
+            if let Err(e) = library.load_asset(&asset_path, &file).await {
                 println!("[WARNING] Parse error at \"{}\":\n{}", file.display(), e);
             }
         }
@@ -147,32 +149,32 @@ pub struct CompiledAssetLibrary {
 }
 
 impl CompiledAssetLibrary {
-    pub fn write_contents(&self, compiler: &PackCompiler) -> anyhow::Result<()> {
-        Self::write_asset_collection(compiler, &self.models)?;
-        Self::write_asset_collection(compiler, &self.blockstates)?;
-        Self::write_asset_collection(compiler, &self.atlases)?;
-        Self::write_asset_collection(compiler, &self.textures_meta)?;
+    pub async fn write_contents<'a>(&self, compiler: &PackCompiler<'a>) -> anyhow::Result<()> {
+        Self::write_asset_collection(compiler, &self.models).await?;
+        Self::write_asset_collection(compiler, &self.blockstates).await?;
+        Self::write_asset_collection(compiler, &self.atlases).await?;
+        Self::write_asset_collection(compiler, &self.textures_meta).await?;
 
         for (id, texture) in &self.textures {
-            Self::copy_asset(compiler, id, texture, &AssetType::Texture)?;
+            Self::copy_asset(compiler, id, texture, &AssetType::Texture).await?;
         }
 
         Ok(())
     }
 
-    fn write_asset_collection<T: Asset + Serialize>(
-        compiler: &PackCompiler,
+    async fn write_asset_collection<'a, T: Asset + Serialize>(
+        compiler: &PackCompiler<'a>,
         collection: &HashMap<Identifier, T>,
     ) -> anyhow::Result<()> {
         for (id, asset) in collection {
-            Self::write_asset(compiler, id, asset)?;
+            Self::write_asset(compiler, id, asset).await?;
         }
 
         Ok(())
     }
 
-    fn write_asset<T: Asset + Serialize>(
-        compiler: &PackCompiler,
+    async fn write_asset<'a, T: Asset + Serialize>(
+        compiler: &PackCompiler<'a>,
         id: &Identifier,
         asset: &T,
     ) -> anyhow::Result<()> {
@@ -188,18 +190,19 @@ impl CompiledAssetLibrary {
                 output_file_path.display()
             )
         })?;
-        std::fs::create_dir_all(output_folder)?;
+        async_fs::create_dir_all(output_folder).await?;
 
         let output = compiler.profile.json_type.to_string(&asset)?;
 
-        let mut output_file = File::create(output_file_path)?;
-        output_file.write_all(output.as_bytes())?;
+        let mut output_file = File::create(output_file_path).await?;
+        output_file.write_all(output.as_bytes()).await?;
+        output_file.flush().await?;
 
         Ok(())
     }
 
-    fn copy_asset<P: AsRef<Path>>(
-        compiler: &PackCompiler,
+    async fn copy_asset<'a, P: AsRef<Path>>(
+        compiler: &PackCompiler<'a>,
         id: &Identifier,
         asset: P,
         asset_type: &AssetType,
@@ -212,9 +215,9 @@ impl CompiledAssetLibrary {
                 output_file_path.display()
             )
         })?;
-        std::fs::create_dir_all(output_folder)?;
+        async_fs::create_dir_all(output_folder).await?;
 
-        std::fs::copy(asset, output_file_path)?;
+        async_fs::copy(asset, output_file_path).await?;
 
         Ok(())
     }

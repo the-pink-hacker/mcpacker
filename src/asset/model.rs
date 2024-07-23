@@ -188,9 +188,9 @@ impl<'a> ModelBuilder<'a> {
             lookup_model.update_texture(&VariableIdentifier::new(old_texture_id), new_texture_id);
         }
 
-        for element in lookup_model.elements.clone() {
-            self.output_model.elements.push(element);
-        }
+        self.output_model
+            .elements
+            .append(&mut lookup_model.elements);
 
         for (texture_name, texture_id) in lookup_model.textures.clone() {
             self.output_model.textures.insert(texture_name, texture_id);
@@ -198,6 +198,10 @@ impl<'a> ModelBuilder<'a> {
 
         if let Some(parent) = lookup_model.parent {
             self.output_model.parent = Some(parent);
+        }
+
+        if let Some(display) = lookup_model.display {
+            self.output_model.display.replace(display);
         }
 
         Ok(())

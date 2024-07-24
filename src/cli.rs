@@ -21,6 +21,14 @@ pub enum Subcommands {
         /// Which profile should be used to build the pack(s).
         profile: String,
 
+        /// Modrinth version name
+        /// Example: v1.4.0 - Beta 3
+        version_name: String,
+
+        /// Modrinth version number
+        /// Example: v1.4.0-b.3
+        version_number: String,
+
         /// The pack(s) that should be built.
         builds: Vec<String>,
 

@@ -11,17 +11,25 @@ use super::PackCompiler;
 #[derive(Default)]
 pub struct DeployAPIContext {
     modrinth: Ferinth,
+    version_name: String,
+    version_number: String,
 }
 
 impl DeployAPIContext {
-    pub fn new(modrinth_api_token: &str) -> anyhow::Result<Self> {
+    pub fn new(
+        modrinth_api_token: impl AsRef<str>,
+        version_name: String,
+        version_number: String,
+    ) -> anyhow::Result<Self> {
         Ok(DeployAPIContext {
             modrinth: Ferinth::new(
                 env!("CARGO_CRATE_NAME"),
                 Some(env!("CARGO_PKG_VERSION")),
                 Some("pink@thepinkhacker.com"),
-                Some(modrinth_api_token),
+                Some(modrinth_api_token.as_ref()),
             )?,
+            version_name,
+            version_number,
         })
     }
 }
@@ -45,8 +53,11 @@ impl<'a> PackCompiler<'a> {
                 .to_string_lossy()
                 .to_string();
             let file_contents = std::fs::read(zip_path)?;
-            let version_meta =
-                self.as_modrinth_version(zip_name.clone(), changelog.as_ref().to_string())?;
+            let version_meta = self.as_modrinth_version(
+                api_context,
+                zip_name.clone(),
+                changelog.as_ref().to_string(),
+            )?;
             let response = api_context
                 .modrinth
                 .create_version(&version_meta, vec![(zip_name, file_contents)])
@@ -60,12 +71,19 @@ impl<'a> PackCompiler<'a> {
 
     pub fn as_modrinth_version(
         self,
+        api_context: &DeployAPIContext,
         file_name: String,
         changelog: String,
     ) -> anyhow::Result<CreateVersion> {
+        let primary_version = self
+            .minecraft_versions
+            .first()
+            .context("There must be at least one Minecraft version supplied.")?;
+        let name = format!("{} - {}", api_context.version_name, primary_version);
+        let version_number = format!("{}-{}", api_context.version_number, primary_version);
         Ok(CreateVersion {
-            name: "API TEST".to_string(),
-            version_number: "test2".to_string(),
+            name,
+            version_number,
             changelog: Some(changelog),
             dependencies: vec![],
             game_versions: self.minecraft_versions,

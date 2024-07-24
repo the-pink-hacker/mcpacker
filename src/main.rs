@@ -43,6 +43,8 @@ async fn main() -> anyhow::Result<()> {
         }
         Subcommands::Deploy {
             profile,
+            version_name,
+            version_number,
             builds,
             modrinth_api_token,
         } => {
@@ -53,6 +55,8 @@ async fn main() -> anyhow::Result<()> {
                         args.minecraft,
                         builds.to_vec(),
                         profile.clone(),
+                        version_name.to_string(),
+                        version_number.to_string(),
                         modrinth_api_token,
                     )
                 })

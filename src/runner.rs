@@ -50,7 +50,9 @@ impl Runner {
         minecraft_path: PathBuf,
         builds: Vec<String>,
         profile: String,
-        modrinth_api_token: &str,
+        version_name: String,
+        version_number: String,
+        modrinth_api_token: impl AsRef<str>,
     ) -> anyhow::Result<Self> {
         let project_sanitizer = config
             .parent()
@@ -62,7 +64,11 @@ impl Runner {
             minecraft_path,
             builds,
             profile,
-            api_context: Some(DeployAPIContext::new(modrinth_api_token)?),
+            api_context: Some(DeployAPIContext::new(
+                modrinth_api_token,
+                version_name,
+                version_number,
+            )?),
             changed: Arc::new(Mutex::new(Cell::new(true))),
         })
     }

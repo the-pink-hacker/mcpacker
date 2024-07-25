@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, OneOrMany};
 
 use crate::{
-    asset::zfighting::ZFightingModifier, compile::redirect::Redirect,
+    compile::{redirect::Redirect, zfighting::ZFightingModifier},
     minecraft::asset::types::text::RawText,
 };
 

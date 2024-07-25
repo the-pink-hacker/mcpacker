@@ -1,7 +1,13 @@
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::minecraft::asset::model::{FaceNormal, Model, ModelElement};
+use crate::{
+    compile::{modifier::Modifier, PackCompiler},
+    minecraft::asset::{
+        model::{FaceNormal, Model, ModelElement},
+        types::identifier::Identifier,
+    },
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
@@ -31,18 +37,12 @@ impl ZFightingModifier {
     }
 }
 
-impl Model {
-    pub fn apply_zfighting<'a>(
-        &mut self,
-        modifiers: impl IntoIterator<Item = &'a ZFightingModifier>,
-        rand: &mut impl Rng,
-    ) {
-        for modifier in modifiers {
-            let offset = modifier.get_offset(rand);
+impl Modifier<Model, Identifier> for ZFightingModifier {
+    fn apply_modifier(&self, asset: &mut Model, compiler: &mut PackCompiler) {
+        let offset = self.get_offset(&mut compiler.rand);
 
-            for element in &mut self.elements {
-                element.apply_zfighting_modifier(modifier, offset);
-            }
+        for element in &mut asset.elements {
+            element.apply_zfighting_modifier(self, offset)
         }
     }
 }

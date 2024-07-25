@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-use super::{dependency::DependencyGraph, PackCompiler};
+use super::{dependency::DependencyGraph, modifier::Modifier, PackCompiler};
 
 #[derive(Debug, Default)]
 pub struct AssetLibrary {
@@ -73,7 +73,7 @@ impl AssetLibrary {
         Ok(())
     }
 
-    pub fn compile(mut self, compiler: &mut PackCompiler) -> anyhow::Result<CompiledAssetLibrary> {
+    pub fn compile(mut self) -> anyhow::Result<CompiledAssetLibrary> {
         let model_graph = DependencyGraph::from(&self.models).sort()?;
 
         let mut compiled_models = HashMap::with_capacity(self.models.len());
@@ -100,14 +100,6 @@ impl AssetLibrary {
                 preprocessed_model.compile(&compiled_models, &preprocessed_models)?;
 
             compiled_models.insert(preprocessed_model_id.clone(), compiled_model);
-        }
-
-        if let Some(zfighting_modifiers) = &compiler.pack.zfighting_modifiers {
-            if !zfighting_modifiers.is_empty() {
-                compiled_models.values_mut().for_each(|model| {
-                    model.apply_zfighting(zfighting_modifiers, &mut compiler.rand)
-                });
-            }
         }
 
         Ok(CompiledAssetLibrary {
@@ -162,6 +154,19 @@ impl CompiledAssetLibrary {
         }
 
         Ok(())
+    }
+
+    pub fn apply_model_modifiers(
+        &mut self,
+        modifiers: Vec<Box<dyn Modifier<Model, Identifier> + Send>>,
+        compiler: &mut PackCompiler,
+    ) {
+        for (model_id, model) in &mut self.models {
+            modifiers
+                .iter()
+                .filter(|modifier| modifier.does_modifier_apply(model_id))
+                .for_each(|modifier| modifier.apply_modifier(model, compiler));
+        }
     }
 
     async fn write_asset_collection<'a, T: Asset + Serialize>(

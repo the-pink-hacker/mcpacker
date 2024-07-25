@@ -15,8 +15,10 @@ pub mod compiler;
 pub mod dependency;
 pub mod deploy;
 pub mod library;
+pub mod modifier;
 pub mod redirect;
 pub mod tracking;
+pub mod zfighting;
 
 pub struct PackCompiler<'a> {
     project_sanitizer: &'a PathSanitizer,

@@ -8,15 +8,9 @@ use async_zip::{base::write::ZipFileWriter, Compression, ZipEntryBuilder};
 use futures_lite::{AsyncReadExt, AsyncWriteExt};
 use walkdir::WalkDir;
 
-use crate::{
-    config::{
-        export::{ExportOutputType, ExportRelocation, PackMCMeta},
-        RedirectFile,
-    },
-    minecraft::asset::types::identifier::AssetType,
-};
+use crate::config::export::{ExportOutputType, ExportRelocation, PackMCMeta};
 
-use super::{library::CompiledAssetLibrary, PackCompiler};
+use super::PackCompiler;
 
 const PACK_META_NAME: &str = "pack.mcmeta";
 const PACK_ICON_NAME: &str = "pack.png";
@@ -49,9 +43,9 @@ impl<'a> PackCompiler<'a> {
     }
 
     async fn run_failable(&mut self) -> anyhow::Result<()> {
-        let mut library = self.populate_asset_library().await?.compile(self)?;
+        let mut library = self.populate_asset_library().await?.compile()?;
 
-        self.process_redirects(&mut library).await?;
+        self.process_modifiers(&mut library).await?;
 
         self.setup_compile_path().await?;
         self.compile_meta().await?;
@@ -62,27 +56,6 @@ impl<'a> PackCompiler<'a> {
 
         self.output().await?;
         self.relocate()?;
-
-        Ok(())
-    }
-
-    async fn process_redirects(
-        &mut self,
-        library: &mut CompiledAssetLibrary,
-    ) -> anyhow::Result<()> {
-        for redirect_path in &self.redirects {
-            let raw = async_fs::read_to_string(self.get_redirect_path(redirect_path)?).await?;
-            let redirect = toml::from_str::<RedirectFile>(&raw)?.redirect;
-
-            match redirect.asset_type {
-                AssetType::Texture => {
-                    for model in library.models.values_mut() {
-                        model.apply_texture_redirect(&redirect);
-                    }
-                }
-                _ => unimplemented!("Asset type not supported."),
-            }
-        }
 
         Ok(())
     }

@@ -5,12 +5,25 @@ use crate::minecraft::asset::{
     types::identifier::{AssetType, Identifier},
 };
 
+use super::{modifier::Modifier, PackCompiler};
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Redirect {
     pub affect: RedirectAffect,
     pub asset_type: AssetType,
     pub from: Identifier,
     pub to: Identifier,
+}
+
+impl Modifier<Model, Identifier> for Redirect {
+    fn apply_modifier(&self, asset: &mut Model, _compiler: &mut PackCompiler) {
+        for texture in asset.textures.values_mut() {
+            match texture {
+                IdentifierOrVariable::Variable(_) => (),
+                IdentifierOrVariable::Identifier(id) => id.apply_redirect(self),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -34,17 +47,6 @@ impl Identifier {
         if let Ok(path) = self.path.strip_prefix(&redirect.from.path) {
             self.path = redirect.to.path.join(path);
             self.namespace.clone_from(&redirect.to.namespace);
-        }
-    }
-}
-
-impl Model {
-    pub fn apply_texture_redirect(&mut self, redirect: &Redirect) {
-        for texture in self.textures.values_mut() {
-            match texture {
-                IdentifierOrVariable::Variable(_) => (),
-                IdentifierOrVariable::Identifier(id) => id.apply_redirect(redirect),
-            }
         }
     }
 }

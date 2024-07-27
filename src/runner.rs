@@ -1,8 +1,16 @@
-use std::{cell::Cell, collections::BTreeSet, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    collections::BTreeSet,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
 use anyhow::Context;
 use notify::{INotifyWatcher, RecursiveMode, Watcher};
-use tokio::{sync::Mutex, task::JoinSet};
+use tokio::task::JoinSet;
 
 use crate::{
     changelog::Changelog,
@@ -20,7 +28,7 @@ pub struct Runner {
     builds: Vec<String>,
     profile: String,
     api_context: Option<DeployAPIContext>,
-    changed: Arc<Mutex<Cell<bool>>>,
+    changed: Arc<AtomicBool>,
 }
 
 impl Runner {
@@ -41,7 +49,7 @@ impl Runner {
             builds,
             profile,
             api_context: None,
-            changed: Arc::new(Mutex::new(Cell::new(true))),
+            changed: Arc::new(AtomicBool::new(true)),
         })
     }
 
@@ -69,7 +77,7 @@ impl Runner {
                 version_name,
                 version_number,
             )?),
-            changed: Arc::new(Mutex::new(Cell::new(true))),
+            changed: Arc::new(AtomicBool::new(true)),
         })
     }
 
@@ -105,10 +113,8 @@ impl Runner {
         loop {
             compiler_listen_interval.tick().await;
 
-            let mut changed = self.changed.lock().await;
-
-            if changed.get() {
-                *changed.get_mut() = false;
+            if self.changed.load(Ordering::Acquire) {
+                self.changed.store(false, Ordering::Release);
                 self.run().await?;
             }
         }
@@ -126,13 +132,7 @@ impl Runner {
                     notify::EventKind::Modify(_)
                     | notify::EventKind::Create(_)
                     | notify::EventKind::Remove(_) => {
-                        tokio::runtime::Builder::new_current_thread()
-                            .enable_all()
-                            .build()
-                            .expect("Failed to create async file watcher runtime.")
-                            .block_on(async move {
-                                *self.changed.lock().await.get_mut() = true;
-                            });
+                        self.changed.store(true, Ordering::Release);
                     }
                     _ => (),
                 },

@@ -3,7 +3,7 @@ use crate::{
     minecraft::asset::{model::Model, types::identifier::Identifier},
 };
 
-use super::{library::CompiledAssetLibrary, PackCompiler};
+use super::{culling::CullingModifier, library::CompiledAssetLibrary, PackCompiler};
 
 type ModelModifiers = Vec<Box<dyn Modifier<Model, Identifier> + Send>>;
 
@@ -22,6 +22,7 @@ impl<'a> PackCompiler<'a> {
     ) -> anyhow::Result<()> {
         let mut modifiers = Vec::new();
         self.add_redirect_modifiers(&mut modifiers).await?;
+        modifiers.push(Box::new(CullingModifier::default()));
         self.add_zfighting_modifiers(&mut modifiers);
 
         library.apply_model_modifiers(modifiers, self);

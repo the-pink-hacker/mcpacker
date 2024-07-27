@@ -12,6 +12,7 @@ use crate::{
 use self::tracking::AssetTracker;
 
 pub mod compiler;
+pub mod culling;
 pub mod dependency;
 pub mod deploy;
 pub mod library;

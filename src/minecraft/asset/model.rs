@@ -93,13 +93,13 @@ impl CullDirection {
 #[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ModelElement {
-    from: Vec3,
-    to: Vec3,
-    rotation: Option<ElementRotation>,
+    pub from: Vec3,
+    pub to: Vec3,
+    pub rotation: Option<ElementRotation>,
     #[serde(default = "get_true", skip_serializing_if = "is_true")]
-    shade: bool,
+    pub shade: bool,
     #[serde(default, skip_serializing_if = "ElementFaces::is_default")]
-    faces: ElementFaces,
+    pub faces: ElementFaces,
 }
 
 impl ModelElement {
@@ -155,12 +155,12 @@ pub enum FaceNormal {
 #[skip_serializing_none]
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct ElementFaces {
-    north: Option<ElementFace>,
-    east: Option<ElementFace>,
-    south: Option<ElementFace>,
-    west: Option<ElementFace>,
-    up: Option<ElementFace>,
-    down: Option<ElementFace>,
+    pub north: Option<ElementFace>,
+    pub east: Option<ElementFace>,
+    pub south: Option<ElementFace>,
+    pub west: Option<ElementFace>,
+    pub up: Option<ElementFace>,
+    pub down: Option<ElementFace>,
 }
 
 impl ElementFaces {

@@ -48,14 +48,13 @@ impl<'a> PackCompiler<'a> {
             .to_string();
 
         let compile_path = project_sanitizer.join(PathBuf::from("build").join(&name))?;
-        let source_path = project_sanitizer.restricted_path.join("src");
 
         let mut compiler = Self {
             project_sanitizer,
             rand: Mcg128Xsl64::seed_from_u64(pack.seed.unwrap_or_default()),
             pack,
             profile,
-            bundles_path: source_path.join("bundles"),
+            bundles_path: project_sanitizer.restricted_path.join("src"),
             resourcepack_path: minecraft_path.join("resourcepacks").join(name),
             compile_path,
             tracker,

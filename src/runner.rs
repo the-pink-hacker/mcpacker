@@ -162,13 +162,7 @@ impl Runner {
 
         let mut asset_tracker = AssetTracker::default();
 
-        asset_tracker.search_bundle_files(
-            &self
-                .project_sanitizer
-                .restricted_path
-                .join("src")
-                .join("bundles"),
-        )?;
+        asset_tracker.search_bundle_files(&self.project_sanitizer.restricted_path.join("src"))?;
 
         let asset_tracker = Arc::from(asset_tracker);
 

@@ -1,9 +1,12 @@
-use crate::minecraft::asset::{
-    model::{Model, ModelElement},
-    types::identifier::Identifier,
+use crate::{
+    compile::PackCompiler,
+    minecraft::asset::{
+        model::{Model, ModelElement},
+        types::identifier::Identifier,
+    },
 };
 
-use super::{modifier::Modifier, PackCompiler};
+use super::Modifier;
 
 #[derive(Default)]
 pub struct CullingModifier;

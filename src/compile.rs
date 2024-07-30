@@ -12,25 +12,20 @@ use crate::{
 use self::tracking::AssetTracker;
 
 pub mod compiler;
-pub mod culling;
 pub mod dependency;
 pub mod deploy;
 pub mod library;
 pub mod modifier;
-pub mod redirect;
 pub mod tracking;
-pub mod zfighting;
 
 pub struct PackCompiler<'a> {
     project_sanitizer: &'a PathSanitizer,
     compile_path: PathBuf,
     bundles_path: PathBuf,
-    redirects_path: PathBuf,
     resourcepack_path: PathBuf,
     pack: PackMetaConfig,
     profile: Arc<ProfileConfig>,
     bundles: Vec<PathBuf>,
-    redirects: Vec<PathBuf>,
     tracker: Arc<AssetTracker>,
     minecraft_versions: Vec<String>,
     pub rand: Mcg128Xsl64,
@@ -61,23 +56,15 @@ impl<'a> PackCompiler<'a> {
             pack,
             profile,
             bundles_path: source_path.join("bundles"),
-            redirects_path: source_path.join("redirects"),
             resourcepack_path: minecraft_path.join("resourcepacks").join(name),
             compile_path,
             tracker,
-            redirects: Vec::with_capacity(build.redirects.len()),
             bundles: Vec::with_capacity(build.bundles.len()),
             minecraft_versions: build.minecraft_versions,
         };
 
         for bundle in build.bundles {
             compiler.bundles.push(compiler.get_bundle_path(bundle)?);
-        }
-
-        for redirect in build.redirects {
-            compiler
-                .redirects
-                .push(compiler.get_redirect_path(redirect)?);
         }
 
         Ok(compiler)

@@ -1,11 +1,14 @@
 use serde::Deserialize;
 
-use crate::minecraft::asset::{
-    model::{IdentifierOrVariable, Model},
-    types::identifier::{AssetType, Identifier},
+use crate::{
+    compile::PackCompiler,
+    minecraft::asset::{
+        model::{IdentifierOrVariable, Model},
+        types::identifier::{AssetType, Identifier},
+    },
 };
 
-use super::{modifier::Modifier, PackCompiler};
+use super::Modifier;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Redirect {

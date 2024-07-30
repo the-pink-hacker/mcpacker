@@ -37,15 +37,10 @@ impl<'a> PackCompiler<'a> {
             .sanitize(self.bundles_path.join(bundle))
     }
 
-    pub fn get_redirect_path<P: AsRef<Path>>(&self, redirect: P) -> anyhow::Result<PathBuf> {
-        self.project_sanitizer
-            .sanitize(self.redirects_path.join(redirect).with_extension("toml"))
-    }
-
     async fn run_failable(&mut self) -> anyhow::Result<()> {
         let mut library = self.populate_asset_library().await?.compile()?;
 
-        self.process_modifiers(&mut library).await?;
+        self.process_modifiers(&mut library)?;
 
         self.setup_compile_path().await?;
         self.compile_meta().await?;

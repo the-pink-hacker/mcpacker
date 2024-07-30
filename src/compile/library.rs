@@ -21,11 +21,22 @@ use crate::{
     },
 };
 
-use super::{dependency::DependencyGraph, modifier::Modifier, PackCompiler};
+use super::{
+    dependency::DependencyGraph,
+    modifier::{
+        configurable::{
+            ConfigurableModifier, ConfigurableModifierCollection, ConfigurableModifierIndex,
+        },
+        ModelModifiers,
+    },
+    PackCompiler,
+};
 
 #[derive(Debug, Default)]
 pub struct AssetLibrary {
     pub models: HashMap<Identifier, ModelGeneric>,
+    pub modifiers: HashMap<Identifier, ConfigurableModifierCollection>,
+    pub modifier_index: ConfigurableModifierIndex,
     pub blockstates: HashMap<Identifier, Blockstate>,
     pub atlases: HashMap<Identifier, Atlas>,
     pub textures: HashMap<Identifier, PathBuf>,
@@ -57,18 +68,35 @@ impl AssetLibrary {
             AssetType::TextureMeta => {
                 Self::load_asset_generic(id, asset_path_absolute, &mut self.textures_meta).await
             }
+            AssetType::Modifier => {
+                Self::load_asset_generic(id, asset_path_absolute, &mut self.modifiers).await
+            }
+            AssetType::ModifierIndex => {
+                Self::load_asset_single(asset_path_absolute, &mut self.modifier_index).await
+            }
             _ => Err(anyhow!("Asset type unsupported")),
         }
     }
 
-    async fn load_asset_generic<A: LoadableAsset, P: AsRef<Path>>(
+    async fn load_asset_generic<A: LoadableAsset>(
         id: Identifier,
-        path: P,
+        path: impl AsRef<Path>,
         store: &mut HashMap<Identifier, A>,
     ) -> anyhow::Result<()> {
         let raw = async_fs::read_to_string(path).await?;
         let parsed = A::load_asset(raw)?;
         store.insert(id, parsed);
+
+        Ok(())
+    }
+
+    async fn load_asset_single<A: LoadableAsset>(
+        path: impl AsRef<Path>,
+        store: &mut A,
+    ) -> anyhow::Result<()> {
+        let raw = async_fs::read_to_string(path).await?;
+        let parsed = A::load_asset(raw)?;
+        *store = parsed;
 
         Ok(())
     }
@@ -102,8 +130,28 @@ impl AssetLibrary {
             compiled_models.insert(preprocessed_model_id.clone(), compiled_model);
         }
 
+        let mut modifiers = Vec::new();
+
+        for modifier_collection_id in &self.modifier_index.order {
+            let modifier_collection = self
+                .modifiers
+                .get(modifier_collection_id)
+                .with_context(|| {
+                    format!(
+                        "Failed to lookup modifier collection: {}",
+                        modifier_collection_id
+                    )
+                })?
+                .modifiers
+                .iter()
+                .cloned()
+                .map(ConfigurableModifier::into);
+            modifiers.extend(modifier_collection);
+        }
+
         Ok(CompiledAssetLibrary {
             models: compiled_models,
+            modifiers,
             blockstates: self.blockstates,
             atlases: self.atlases,
             textures: self.textures,
@@ -133,9 +181,9 @@ impl<'a> PackCompiler<'a> {
     }
 }
 
-#[derive(Debug)]
 pub struct CompiledAssetLibrary {
     pub models: HashMap<Identifier, Model>,
+    pub modifiers: ModelModifiers,
     pub blockstates: HashMap<Identifier, Blockstate>,
     pub atlases: HashMap<Identifier, Atlas>,
     pub textures: HashMap<Identifier, PathBuf>,
@@ -154,19 +202,6 @@ impl CompiledAssetLibrary {
         }
 
         Ok(())
-    }
-
-    pub fn apply_model_modifiers(
-        &mut self,
-        modifiers: Vec<Box<dyn Modifier<Model, Identifier> + Send>>,
-        compiler: &mut PackCompiler,
-    ) {
-        for (model_id, model) in &mut self.models {
-            modifiers
-                .iter()
-                .filter(|modifier| modifier.does_modifier_apply(model_id))
-                .for_each(|modifier| modifier.apply_modifier(model, compiler));
-        }
     }
 
     async fn write_asset_collection<'a, T: Asset + Serialize>(

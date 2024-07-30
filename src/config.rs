@@ -11,10 +11,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, OneOrMany};
 
-use crate::{
-    compile::{redirect::Redirect, zfighting::ZFightingModifier},
-    minecraft::asset::types::text::RawText,
-};
+use crate::minecraft::asset::types::text::RawText;
 
 use self::export::{ExportOutputType, ExportRelocation, JsonExportType};
 
@@ -72,7 +69,6 @@ pub struct PackMetaConfig {
     pub license: Option<PathBuf>,
     pub modrinth_project_id: Option<String>,
     pub seed: Option<u64>,
-    pub zfighting_modifiers: Option<Vec<ZFightingModifier>>,
 }
 
 impl PackMetaConfig {
@@ -100,11 +96,6 @@ impl PackMetaConfig {
                 profile.modrinth_project_id,
             ),
             seed: Self::condence_option(global.seed, build.seed, profile.seed),
-            zfighting_modifiers: Self::condence_option(
-                global.zfighting_modifiers,
-                build.zfighting_modifiers,
-                profile.zfighting_modifiers,
-            ),
         }
     }
 
@@ -148,15 +139,7 @@ pub struct CollectionConfig {
     pub bundles: Vec<PathBuf>,
     #[serde_as(as = "OneOrMany<_>")]
     #[serde(default)]
-    pub redirects: Vec<PathBuf>,
-    #[serde_as(as = "OneOrMany<_>")]
-    #[serde(default)]
     pub minecraft_versions: Vec<String>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct RedirectFile {
-    pub redirect: Redirect,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]

@@ -1,11 +1,15 @@
-use crate::{
-    config::RedirectFile,
-    minecraft::asset::{model::Model, types::identifier::Identifier},
-};
+use crate::minecraft::asset::{model::Model, types::identifier::Identifier};
 
-use super::{culling::CullingModifier, library::CompiledAssetLibrary, PackCompiler};
+use self::culling::CullingModifier;
 
-type ModelModifiers = Vec<Box<dyn Modifier<Model, Identifier> + Send>>;
+use super::{library::CompiledAssetLibrary, PackCompiler};
+
+pub mod configurable;
+pub mod culling;
+pub mod redirect;
+pub mod zfighting;
+
+pub type ModelModifiers = Vec<Box<dyn Modifier<Model, Identifier> + Send + Sync>>;
 
 pub trait Modifier<A, S> {
     fn apply_modifier(&self, asset: &mut A, compiler: &mut PackCompiler);
@@ -16,40 +20,22 @@ pub trait Modifier<A, S> {
 }
 
 impl<'a> PackCompiler<'a> {
-    pub async fn process_modifiers(
-        &mut self,
-        library: &mut CompiledAssetLibrary,
-    ) -> anyhow::Result<()> {
-        let mut modifiers = Vec::new();
-        self.add_redirect_modifiers(&mut modifiers).await?;
-        modifiers.push(Box::new(CullingModifier::default()));
-        self.add_zfighting_modifiers(&mut modifiers);
+    pub fn process_modifiers(&mut self, library: &mut CompiledAssetLibrary) -> anyhow::Result<()> {
+        library.modifiers.push(Box::new(CullingModifier::default()));
 
-        library.apply_model_modifiers(modifiers, self);
+        library.apply_model_modifiers(self);
 
         Ok(())
     }
+}
 
-    async fn add_redirect_modifiers(&self, modifiers: &mut ModelModifiers) -> anyhow::Result<()> {
-        modifiers.reserve(self.redirects.len());
-
-        for redirect_path in &self.redirects {
-            let raw_redirect =
-                async_fs::read_to_string(self.get_redirect_path(redirect_path)?).await?;
-            let redirect = toml::from_str::<RedirectFile>(&raw_redirect)?.redirect;
-            modifiers.push(Box::new(redirect));
-        }
-
-        Ok(())
-    }
-
-    fn add_zfighting_modifiers(&self, modifiers: &mut ModelModifiers) {
-        if let Some(zfighting_modifiers) = &self.pack.zfighting_modifiers {
-            modifiers.reserve(zfighting_modifiers.len());
-
-            for zfighting_modifier in zfighting_modifiers {
-                modifiers.push(Box::new(zfighting_modifier.clone()));
-            }
-        }
+impl CompiledAssetLibrary {
+    fn apply_model_modifiers(&mut self, compiler: &mut PackCompiler) {
+        self.models.iter_mut().for_each(|(model_id, model)| {
+            self.modifiers
+                .iter()
+                .filter(|modifier| modifier.does_modifier_apply(model_id))
+                .for_each(|modifier| modifier.apply_modifier(model, compiler))
+        });
     }
 }

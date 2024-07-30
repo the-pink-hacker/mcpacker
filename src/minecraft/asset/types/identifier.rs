@@ -21,6 +21,8 @@ pub enum AssetType {
     Particle,
     Text,
     Language,
+    Modifier,
+    ModifierIndex,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -67,6 +69,8 @@ impl Identifier {
                     _ => None,
                 }),
                 "atlases" => Some(AssetType::Atlas),
+                "modifiers" => Some(AssetType::Modifier),
+                "modifiers.toml" => Some(AssetType::ModifierIndex),
                 _ => None,
             })
             .with_context(|| {
@@ -95,6 +99,8 @@ impl Identifier {
             AssetType::Text => ("texts", "txt"),
             AssetType::Particle => ("particles", "json"),
             AssetType::Language => ("lang", "json"),
+            AssetType::Modifier => ("modifiers", "toml"),
+            AssetType::ModifierIndex => (".", "toml"),
         };
 
         asset_path

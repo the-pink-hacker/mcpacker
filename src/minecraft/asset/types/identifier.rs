@@ -113,6 +113,10 @@ impl Identifier {
     pub fn is_minecraft(&self) -> bool {
         self.namespace == DEFAULT_NAMESPACE
     }
+
+    pub fn starts_with(&self, other: &Identifier) -> bool {
+        self.namespace == other.namespace && self.path.starts_with(&other.path)
+    }
 }
 
 impl FromStr for Identifier {
@@ -260,5 +264,26 @@ mod tests {
         let id = Identifier::new("quark", "block/sponge");
         let result = Identifier::from_path("quark/models/block/sponge.json").unwrap();
         assert_eq!((AssetType::Model, id), result);
+    }
+
+    #[test]
+    fn starts_with_match() {
+        let id = Identifier::minecraft("block/dirt");
+        let other = Identifier::minecraft("block");
+        assert!(id.starts_with(&other));
+    }
+
+    #[test]
+    fn starts_with_namespace_miss() {
+        let id = Identifier::minecraft("block/dirt");
+        let other = Identifier::new("quark", "block");
+        assert!(!id.starts_with(&other));
+    }
+
+    #[test]
+    fn starts_with_miss() {
+        let id = Identifier::minecraft("block/dirt");
+        let other = Identifier::minecraft("item");
+        assert!(!id.starts_with(&other));
     }
 }

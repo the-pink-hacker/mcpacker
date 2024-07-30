@@ -133,16 +133,16 @@ impl ModelElement {
         (&mut self.from.y, FaceNormal::Negative)
     }
 
-    pub fn within_cube(&self) -> bool {
+    pub fn within_cube(&self, cube_from: &Vec3, cube_to: &Vec3) -> bool {
         let (from_x, from_y, from_z) = (&self.from).into();
         let (to_x, to_y, to_z) = (&self.to).into();
 
-        *from_x >= 0.0
-            && *from_y >= 0.0
-            && *from_z >= 0.0
-            && *to_x <= 16.0
-            && *to_y <= 16.0
-            && *to_z <= 16.0
+        *from_x >= cube_from.x
+            && *from_y >= cube_from.y
+            && *from_z >= cube_from.z
+            && *to_x <= cube_to.x
+            && *to_y <= cube_to.y
+            && *to_z <= cube_to.z
     }
 }
 

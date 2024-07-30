@@ -1,6 +1,7 @@
 pub mod atlas;
 pub mod blockstate;
 pub mod model;
+pub mod selector;
 pub mod texture;
 
 pub trait LoadableAsset<T = Self> {

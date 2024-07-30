@@ -2,10 +2,11 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    asset::selector::AssetSelector,
     compile::{modifier::Modifier, PackCompiler},
     minecraft::asset::{
         model::{FaceNormal, Model, ModelElement},
-        types::identifier::Identifier,
+        types::{identifier::Identifier, vec::Vec3},
     },
 };
 
@@ -25,15 +26,25 @@ pub struct ZFightingModifier {
     pub direction: Direction,
     #[serde(default)]
     pub cube_check: bool,
+    #[serde(default)]
+    pub cube_from: Vec3,
+    #[serde(default = "ZFightingModifier::default_cube_to")]
+    pub cube_to: Vec3,
     pub offset: f32,
     #[serde(default)]
     pub random_offset: f32,
     pub intersection: f32,
+    #[serde(default)]
+    pub selector: AssetSelector,
 }
 
 impl ZFightingModifier {
     pub fn get_offset(&self, rand: &mut impl Rng) -> f32 {
         self.offset + rand.gen_range(-self.random_offset..=self.random_offset)
+    }
+
+    fn default_cube_to() -> Vec3 {
+        Vec3::new(16.0, 16.0, 16.0)
     }
 }
 
@@ -45,11 +56,15 @@ impl Modifier<Model, Identifier> for ZFightingModifier {
             element.apply_zfighting_modifier(self, offset)
         }
     }
+
+    fn does_modifier_apply(&self, id: &Identifier) -> bool {
+        self.selector.applies(id)
+    }
 }
 
 impl ModelElement {
     fn apply_zfighting_modifier(&mut self, modifier: &ZFightingModifier, offset: f32) {
-        if modifier.cube_check && self.within_cube() {
+        if modifier.cube_check && self.within_cube(&modifier.cube_from, &modifier.cube_to) {
             return;
         }
 

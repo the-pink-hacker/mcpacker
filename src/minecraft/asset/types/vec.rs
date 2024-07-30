@@ -4,7 +4,7 @@ use serde::{de::Visitor, ser::SerializeTuple, Deserialize, Serialize};
 
 use crate::minecraft::serialize::FloatInt;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -109,7 +109,7 @@ impl<'de> Visitor<'de> for Vec3Visitor {
         Ok(Self::Value { x, y, z })
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Vec4 {
     pub w: f32,
     pub x: f32,

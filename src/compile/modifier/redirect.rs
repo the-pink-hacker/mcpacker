@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 use crate::{
+    asset::selector::AssetSelector,
     compile::PackCompiler,
     minecraft::asset::{
         model::{IdentifierOrVariable, Model},
@@ -16,6 +17,8 @@ pub struct Redirect {
     pub asset_type: AssetType,
     pub from: Identifier,
     pub to: Identifier,
+    #[serde(default)]
+    pub selector: AssetSelector,
 }
 
 impl Modifier<Model, Identifier> for Redirect {
@@ -26,6 +29,10 @@ impl Modifier<Model, Identifier> for Redirect {
                 IdentifierOrVariable::Identifier(id) => id.apply_redirect(self),
             }
         }
+    }
+
+    fn does_modifier_apply(&self, id: &Identifier) -> bool {
+        self.selector.applies(id)
     }
 }
 

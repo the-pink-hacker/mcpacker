@@ -66,6 +66,8 @@ pub struct ModelPart {
     cullface: Option<CullDirection>,
     #[serde(default)]
     textures: IndexMap<String, VariableIdentifier>,
+    #[serde(default)]
+    void_parent: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -168,6 +170,10 @@ impl<'a> ModelBuilder<'a> {
             ModelOrId::Id(id) => self.lookup_model(id)?,
         }
         .clone();
+
+        if part.void_parent {
+            lookup_model.parent.take();
+        }
 
         if let Some(cullface) = &part.cullface {
             lookup_model.set_cullface(cullface);

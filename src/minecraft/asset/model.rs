@@ -236,6 +236,12 @@ pub struct ElementRotation {
     rescale: bool,
 }
 
+impl ElementRotation {
+    pub fn is_zero(&self) -> bool {
+        self.angle == 0.0
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Axis {

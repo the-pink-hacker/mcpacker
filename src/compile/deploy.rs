@@ -96,7 +96,7 @@ impl<'a> PackCompiler<'a> {
             name,
             version_number,
             changelog: Some(changelog),
-            dependencies: vec![],
+            dependencies: self.pack.modrinth_depenedencies,
             game_versions: self.minecraft_versions,
             version_type: VersionType::Alpha,
             loaders: vec!["minecraft".to_string()],

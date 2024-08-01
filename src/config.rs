@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::Context;
+use ferinth::structures::version::Dependency;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, OneOrMany};
@@ -69,6 +70,7 @@ pub struct PackMetaConfig {
     pub license: Option<PathBuf>,
     pub modrinth_project_id: Option<String>,
     pub seed: Option<u64>,
+    pub modrinth_depenedencies: Vec<Dependency>,
 }
 
 impl PackMetaConfig {
@@ -96,6 +98,11 @@ impl PackMetaConfig {
                 profile.modrinth_project_id,
             ),
             seed: Self::condence_option(global.seed, build.seed, profile.seed),
+            modrinth_depenedencies: Self::combine_fields(
+                global.modrinth_depenedencies,
+                build.modrinth_depenedencies,
+                profile.modrinth_depenedencies,
+            ),
         }
     }
 
@@ -117,6 +124,15 @@ impl PackMetaConfig {
         } else {
             global
         }
+    }
+
+    fn combine_fields<T>(mut global: Vec<T>, mut build: Vec<T>, mut profile: Vec<T>) -> Vec<T> {
+        global.reserve(build.len() + profile.len());
+
+        global.append(&mut build);
+        global.append(&mut profile);
+
+        global
     }
 }
 

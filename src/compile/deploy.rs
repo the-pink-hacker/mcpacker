@@ -52,15 +52,26 @@ impl<'a> PackCompiler<'a> {
                 })?
                 .to_string_lossy()
                 .to_string();
+
+            let mut zip_name_part = zip_name
+                .chars()
+                .filter(char::is_ascii)
+                .collect::<String>()
+                .replace(' ', "-");
+            zip_name_part += "-primary";
+
             let file_contents = std::fs::read(zip_path)?;
             let version_meta = self.as_modrinth_version(
                 api_context,
-                zip_name.clone(),
+                zip_name_part.clone(),
                 changelog.as_ref().to_string(),
             )?;
             let response = api_context
                 .modrinth
-                .create_version(&version_meta, vec![(zip_name, file_contents)])
+                .create_version(
+                    &version_meta,
+                    vec![(zip_name_part, zip_name, file_contents)],
+                )
                 .await?;
 
             println!("{:#?}", response);

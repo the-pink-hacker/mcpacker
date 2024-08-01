@@ -12,7 +12,7 @@ async-fs = "2.1.2"
 async-process = "2.2.3"
 async_zip = { version = "0.0.17", features = ["deflate"] }
 clap = { version = "4.5.4", features = ["derive", "string"] }
-ferinth = { git = "https://github.com/the-pink-hacker/ferinth.git", rev = "d7893136a8550b2a85a7ceb1ea82fe590eabee47" }
+ferinth = { git = "https://github.com/the-pink-hacker/ferinth.git", rev = "197c0d3b28ea0839feae55f775a9ddd89e77cf96" }
 futures-lite = "2.3.0"
 indexmap = { version = "2.2.6", features = ["serde"] }
 notify = "6.1.1"

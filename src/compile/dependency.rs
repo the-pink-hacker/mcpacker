@@ -57,7 +57,9 @@ impl<'a> DependencyGraph<'a> {
 
         if let ModelComposition::Template(template_id) = &model.composition {
             self.graph.add_dependency(template_id, model_id);
-        } else if imports.is_empty() {
+        }
+
+        if imports.is_empty() {
             // There are no references to this model in the graph.
             // Must add to graph manually.
             self.graph.insert(model_id);

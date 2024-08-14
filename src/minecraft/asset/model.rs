@@ -37,10 +37,16 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn set_cullface(&mut self, value: &CullDirection) {
-        for element in &mut self.elements {
-            element.faces.set_cullface(value);
-        }
+    pub fn set_cullface(&mut self, cullface: CullDirection) {
+        self.elements
+            .iter_mut()
+            .for_each(|element| element.set_cullface(cullface));
+    }
+
+    pub fn auto_cullface(&mut self) {
+        self.elements
+            .iter_mut()
+            .for_each(ModelElement::auto_cullface);
     }
 
     pub fn update_texture(&mut self, old: &VariableIdentifier, new: VariableIdentifier) {
@@ -48,6 +54,39 @@ impl Model {
             for face in (&mut element.faces).into_iter().flatten() {
                 if face.texture == *old {
                     face.texture = new.clone();
+                }
+            }
+        }
+    }
+
+    pub fn scan_filter_elements(
+        &mut self,
+        predicate: impl Fn(&mut ModelElement, &ModelElement) -> bool,
+    ) {
+        let mut elements_length = self.elements.len();
+
+        // One single element is never both mutable and imutable.
+        // Borrow checker doesn't know this.
+        // More idomatic way would be better.
+        let scan_assets = self.elements.clone();
+
+        // Reverse to allow swap remove
+        for primary_index in (0..elements_length).rev() {
+            let primary_cube = self.elements.get_mut(primary_index).unwrap();
+
+            for scan_index in 0..elements_length {
+                if scan_index == primary_index {
+                    continue;
+                }
+
+                let scan_cube = scan_assets.get(scan_index).unwrap();
+
+                let element_empty = predicate(primary_cube, scan_cube);
+
+                if element_empty {
+                    self.elements.swap_remove(primary_index);
+                    elements_length -= 1;
+                    break;
                 }
             }
         }
@@ -71,7 +110,7 @@ pub enum IdentifierOrVariable {
     Variable(VariableIdentifier),
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Default, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CullDirection {
     #[default]
@@ -134,15 +173,126 @@ impl ModelElement {
     }
 
     pub fn within_cube(&self, cube_from: &Vec3, cube_to: &Vec3) -> bool {
-        let (from_x, from_y, from_z) = (&self.from).into();
-        let (to_x, to_y, to_z) = (&self.to).into();
+        let (from_x, from_y, from_z) = self.from.into();
+        let (to_x, to_y, to_z) = self.to.into();
 
-        *from_x >= cube_from.x
-            && *from_y >= cube_from.y
-            && *from_z >= cube_from.z
-            && *to_x <= cube_to.x
-            && *to_y <= cube_to.y
-            && *to_z <= cube_to.z
+        from_x >= cube_from.x
+            && from_y >= cube_from.y
+            && from_z >= cube_from.z
+            && to_x <= cube_to.x
+            && to_y <= cube_to.y
+            && to_z <= cube_to.z
+    }
+
+    pub fn auto_cullface(&mut self) {
+        if let Some(face) = &mut self.faces.north {
+            let (face_from, face_to) = &Self::north_position(self.from, self.to);
+            face.cullface = Self::determine_auto_cullface(face_from, face_to);
+        }
+
+        if let Some(face) = &mut self.faces.east {
+            let (face_from, face_to) = &Self::east_position(self.from, self.to);
+            face.cullface = Self::determine_auto_cullface(face_from, face_to);
+        }
+
+        if let Some(face) = &mut self.faces.south {
+            let (face_from, face_to) = &Self::south_position(self.from, self.to);
+            face.cullface = Self::determine_auto_cullface(face_from, face_to);
+        }
+
+        if let Some(face) = &mut self.faces.west {
+            let (face_from, face_to) = &Self::west_position(self.from, self.to);
+            face.cullface = Self::determine_auto_cullface(face_from, face_to);
+        }
+
+        if let Some(face) = &mut self.faces.up {
+            let (face_from, face_to) = &Self::up_position(self.from, self.to);
+            face.cullface = Self::determine_auto_cullface(face_from, face_to);
+        }
+
+        if let Some(face) = &mut self.faces.down {
+            let (face_from, face_to) = &Self::down_position(self.from, self.to);
+            face.cullface = Self::determine_auto_cullface(face_from, face_to);
+        }
+    }
+
+    pub fn set_cullface(&mut self, cullface: CullDirection) {
+        (&mut self.faces)
+            .into_iter()
+            .filter_map(|face| face)
+            .for_each(|face| face.cullface = cullface);
+    }
+
+    fn determine_auto_cullface(face_from: &Vec3, face_to: &Vec3) -> CullDirection {
+        if Self::is_north_contained(face_from, face_to) {
+            CullDirection::North
+        } else if Self::is_east_contained(face_from, face_to) {
+            CullDirection::East
+        } else if Self::is_south_contained(face_from, face_to) {
+            CullDirection::South
+        } else if Self::is_west_contained(face_from, face_to) {
+            CullDirection::West
+        } else if Self::is_up_contained(face_from, face_to) {
+            CullDirection::Up
+        } else if Self::is_down_contained(face_from, face_to) {
+            CullDirection::Down
+        } else {
+            CullDirection::None
+        }
+    }
+
+    #[inline]
+    fn north_position(from: Vec3, to: Vec3) -> (Vec3, Vec3) {
+        (from, Vec3::new(to.x, to.y, from.z))
+    }
+
+    #[inline]
+    fn east_position(from: Vec3, to: Vec3) -> (Vec3, Vec3) {
+        (Vec3::new(to.x, from.y, from.z), to)
+    }
+
+    #[inline]
+    fn south_position(from: Vec3, to: Vec3) -> (Vec3, Vec3) {
+        (Vec3::new(from.x, from.y, to.z), to)
+    }
+
+    #[inline]
+    fn west_position(from: Vec3, to: Vec3) -> (Vec3, Vec3) {
+        (from, Vec3::new(from.x, to.y, to.z))
+    }
+
+    #[inline]
+    fn up_position(from: Vec3, to: Vec3) -> (Vec3, Vec3) {
+        (Vec3::new(from.x, to.y, from.z), to)
+    }
+
+    #[inline]
+    fn down_position(from: Vec3, to: Vec3) -> (Vec3, Vec3) {
+        (from, Vec3::new(to.x, from.y, to.z))
+    }
+
+    fn is_north_contained(from: &Vec3, to: &Vec3) -> bool {
+        from.x >= 0.0 && to.x <= 16.0 && from.y >= 0.0 && to.y <= 16.0 && to.z <= 0.0
+    }
+
+    fn is_east_contained(from: &Vec3, to: &Vec3) -> bool {
+        from.z >= 0.0 && to.z <= 16.0 && from.y >= 0.0 && to.y <= 16.0 && from.x >= 16.0
+    }
+
+    fn is_south_contained(from: &Vec3, to: &Vec3) -> bool {
+        from.x >= 0.0 && to.x <= 16.0 && from.y >= 0.0 && to.y <= 16.0 && from.z >= 16.0
+    }
+
+    fn is_west_contained(from: &Vec3, to: &Vec3) -> bool {
+        from.z >= 0.0 && to.z <= 16.0 && from.y >= 0.0 && to.y <= 16.0 && to.x <= 0.0
+    }
+
+    fn is_up_contained(from: &Vec3, to: &Vec3) -> bool {
+        from.x >= 0.0 && to.x <= 16.0 && from.z >= 0.0 && to.z <= 16.0 && from.y >= 16.0
+    }
+
+    fn is_down_contained(from: &Vec3, to: &Vec3) -> bool {
+        from.x >= 0.0 && to.x <= 16.0 && from.z >= 0.0 && to.z <= 16.0 && to.y <= 0.0
     }
 }
 

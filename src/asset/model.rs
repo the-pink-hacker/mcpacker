@@ -63,11 +63,46 @@ pub struct ModelPart {
     optional: bool,
     #[serde(default)]
     transformations: Vec<Transformation>,
-    cullface: Option<CullDirection>,
+    cullface: Option<CullDirectionAuto>,
     #[serde(default)]
     textures: IndexMap<String, VariableIdentifier>,
     #[serde(default)]
     void_parent: bool,
+}
+
+#[derive(Debug, Deserialize, Default, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum CullDirectionAuto {
+    #[default]
+    None,
+    North,
+    East,
+    South,
+    West,
+    Up,
+    Down,
+    Auto,
+}
+
+impl CullDirectionAuto {
+    pub fn as_culldirection(self) -> Option<CullDirection> {
+        self.into()
+    }
+}
+
+impl From<CullDirectionAuto> for Option<CullDirection> {
+    fn from(value: CullDirectionAuto) -> Self {
+        match value {
+            CullDirectionAuto::Auto => None,
+            CullDirectionAuto::None => Some(CullDirection::None),
+            CullDirectionAuto::North => Some(CullDirection::North),
+            CullDirectionAuto::East => Some(CullDirection::East),
+            CullDirectionAuto::South => Some(CullDirection::South),
+            CullDirectionAuto::West => Some(CullDirection::West),
+            CullDirectionAuto::Up => Some(CullDirection::Up),
+            CullDirectionAuto::Down => Some(CullDirection::Down),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -175,10 +210,6 @@ impl<'a> ModelBuilder<'a> {
             lookup_model.parent.take();
         }
 
-        if let Some(cullface) = &part.cullface {
-            lookup_model.set_cullface(cullface);
-        }
-
         for transform in &part.transformations {
             match transform {
                 Transformation::Rotate { x, y } => {
@@ -187,6 +218,14 @@ impl<'a> ModelBuilder<'a> {
                 }
                 Transformation::Translate { amount } => lookup_model.translate(amount),
                 Transformation::Flip { axis } => lookup_model.flip(axis),
+            }
+        }
+
+        if let Some(cullface_auto) = &part.cullface {
+            if let Some(cullface) = cullface_auto.as_culldirection() {
+                lookup_model.set_cullface(cullface);
+            } else {
+                lookup_model.auto_cullface();
             }
         }
 

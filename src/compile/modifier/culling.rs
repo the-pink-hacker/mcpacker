@@ -13,31 +13,9 @@ pub struct CullingModifier;
 
 impl Modifier<Model, Identifier> for CullingModifier {
     fn apply_modifier(&self, asset: &mut Model, _compiler: &mut PackCompiler) {
-        let elements_length = asset.elements.len();
-
-        // One single element is never both mutable and imutable.
-        // Borrow checker doesn't know this.
-        // More idomatic way would be better.
-        let scan_assets = asset.elements.clone();
-
-        for primary_index in (0..elements_length).rev() {
-            let primary_cube = asset.elements.get_mut(primary_index).unwrap();
-
-            for scan_index in 0..elements_length {
-                if scan_index == primary_index {
-                    continue;
-                }
-
-                let scan_cube = scan_assets.get(scan_index).unwrap();
-
-                let element_empty = primary_cube.cull_faces(scan_cube);
-
-                if element_empty {
-                    asset.elements.swap_remove(primary_index);
-                    break;
-                }
-            }
-        }
+        asset.scan_filter_elements(|primary_element, scan_element| {
+            primary_element.cull_faces(scan_element)
+        });
     }
 }
 

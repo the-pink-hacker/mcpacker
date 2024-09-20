@@ -72,6 +72,7 @@ mod tests {
             asset_type: AssetType::Texture,
             from: Identifier::minecraft("blocks"),
             to: Identifier::minecraft("block"),
+            selector: Default::default(),
         };
         let mut id = Identifier::minecraft("blocks/dirt");
         id.apply_redirect(&redirect);
@@ -87,6 +88,7 @@ mod tests {
             asset_type: AssetType::Texture,
             from: Identifier::minecraft("items"),
             to: Identifier::minecraft("item"),
+            selector: Default::default(),
         };
         let mut id = Identifier::minecraft("blocks/dirt");
         let expected = id.clone();
@@ -102,6 +104,7 @@ mod tests {
             asset_type: AssetType::Texture,
             from: Identifier::minecraft("blocks"),
             to: Identifier::new("quark", "block"),
+            selector: Default::default(),
         };
         let mut id = Identifier::minecraft("blocks/dirt");
         id.apply_redirect(&redirect);

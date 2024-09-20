@@ -70,7 +70,7 @@ pub struct PackMetaConfig {
     pub license: Option<PathBuf>,
     pub modrinth_project_id: Option<String>,
     pub seed: Option<u64>,
-    pub modrinth_depenedencies: Vec<Dependency>,
+    pub modrinth_dependencies: Vec<Dependency>,
 }
 
 impl PackMetaConfig {
@@ -98,10 +98,10 @@ impl PackMetaConfig {
                 profile.modrinth_project_id,
             ),
             seed: Self::condence_option(global.seed, build.seed, profile.seed),
-            modrinth_depenedencies: Self::combine_fields(
-                global.modrinth_depenedencies,
-                build.modrinth_depenedencies,
-                profile.modrinth_depenedencies,
+            modrinth_dependencies: Self::combine_fields(
+                global.modrinth_dependencies,
+                build.modrinth_dependencies,
+                profile.modrinth_dependencies,
             ),
         }
     }

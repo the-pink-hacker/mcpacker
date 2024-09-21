@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::{redirect::Redirect, zfighting::ZFightingModifier, Modifier};
+use super::{culling::CullingModifier, redirect::Redirect, zfighting::ZFightingModifier, Modifier};
 
 #[serde_as]
 #[derive(Debug, Default, Deserialize)]
@@ -55,6 +55,7 @@ impl LoadableAsset for ConfigurableModifierCollection {
 pub enum ConfigurableModifier {
     ZFighting(Box<ZFightingModifier>),
     Redirect(Box<Redirect>),
+    Culling(Box<CullingModifier>),
 }
 
 impl From<ConfigurableModifier> for Box<dyn Modifier<Model, Identifier> + Send + Sync> {
@@ -62,6 +63,7 @@ impl From<ConfigurableModifier> for Box<dyn Modifier<Model, Identifier> + Send +
         match value {
             ConfigurableModifier::ZFighting(modifier) => modifier,
             ConfigurableModifier::Redirect(modifier) => modifier,
+            ConfigurableModifier::Culling(modifier) => modifier,
         }
     }
 }

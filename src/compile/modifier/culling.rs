@@ -1,4 +1,7 @@
+use serde::Deserialize;
+
 use crate::{
+    asset::selector::AssetSelector,
     compile::PackCompiler,
     minecraft::asset::{
         model::{Model, ModelElement},
@@ -8,14 +11,21 @@ use crate::{
 
 use super::Modifier;
 
-#[derive(Default)]
-pub struct CullingModifier;
+#[derive(Debug, Default, Deserialize, Clone)]
+pub struct CullingModifier {
+    #[serde(default)]
+    selector: AssetSelector,
+}
 
 impl Modifier<Model, Identifier> for CullingModifier {
     fn apply_modifier(&self, asset: &mut Model, _compiler: &mut PackCompiler) {
         asset.scan_filter_elements(|primary_element, scan_element| {
             primary_element.cull_faces(scan_element)
         });
+    }
+
+    fn does_modifier_apply(&self, id: &Identifier) -> bool {
+        self.selector.applies(id)
     }
 }
 

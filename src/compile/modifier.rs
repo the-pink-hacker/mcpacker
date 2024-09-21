@@ -1,7 +1,5 @@
 use crate::minecraft::asset::{model::Model, types::identifier::Identifier};
 
-use self::culling::CullingModifier;
-
 use super::{library::CompiledAssetLibrary, PackCompiler};
 
 pub mod configurable;
@@ -14,15 +12,14 @@ pub type ModelModifiers = Vec<Box<dyn Modifier<Model, Identifier> + Send + Sync>
 pub trait Modifier<A, S> {
     fn apply_modifier(&self, asset: &mut A, compiler: &mut PackCompiler);
 
-    fn does_modifier_apply(&self, _id: &S) -> bool {
+    #[allow(unused_variables)]
+    fn does_modifier_apply(&self, id: &S) -> bool {
         true
     }
 }
 
 impl<'a> PackCompiler<'a> {
     pub fn process_modifiers(&mut self, library: &mut CompiledAssetLibrary) -> anyhow::Result<()> {
-        library.modifiers.push(Box::new(CullingModifier::default()));
-
         library.apply_model_modifiers(self);
 
         Ok(())

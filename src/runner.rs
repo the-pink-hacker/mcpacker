@@ -1,5 +1,4 @@
 use std::{
-    collections::BTreeSet,
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -9,6 +8,7 @@ use std::{
 };
 
 use anyhow::Context;
+use indexmap::IndexSet;
 use notify::{INotifyWatcher, RecursiveMode, Watcher};
 use tokio::task::JoinSet;
 
@@ -188,11 +188,11 @@ impl Runner {
         Ok(compilers)
     }
 
-    fn filter_build_list<'a>(&'a self, config: &'a PackConfig) -> BTreeSet<&'a String> {
-        let mut list = BTreeSet::from_iter(self.builds.iter());
+    fn filter_build_list<'a>(&'a self, config: &'a PackConfig) -> IndexSet<&'a String> {
+        let mut list = IndexSet::from_iter(self.builds.iter().rev());
 
-        if list.contains(&"ALL".to_string()) {
-            list = BTreeSet::from_iter(config.build.keys());
+        if list.contains(&String::from("ALL")) {
+            list = IndexSet::from_iter(config.build.keys().rev());
         }
 
         list

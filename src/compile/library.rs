@@ -160,7 +160,7 @@ impl AssetLibrary {
     }
 }
 
-impl<'a> PackCompiler<'a> {
+impl PackCompiler<'_> {
     pub async fn populate_asset_library(&mut self) -> anyhow::Result<AssetLibrary> {
         let tracked_files = self.tracker.condence(&self.bundles)?;
         let mut library = AssetLibrary::default();
@@ -191,7 +191,7 @@ pub struct CompiledAssetLibrary {
 }
 
 impl CompiledAssetLibrary {
-    pub async fn write_contents<'a>(&self, compiler: &PackCompiler<'a>) -> anyhow::Result<()> {
+    pub async fn write_contents(&self, compiler: &PackCompiler<'_>) -> anyhow::Result<()> {
         Self::write_asset_collection(compiler, &self.models).await?;
         Self::write_asset_collection(compiler, &self.blockstates).await?;
         Self::write_asset_collection(compiler, &self.atlases).await?;
@@ -204,8 +204,8 @@ impl CompiledAssetLibrary {
         Ok(())
     }
 
-    async fn write_asset_collection<'a, T: Asset + Serialize>(
-        compiler: &PackCompiler<'a>,
+    async fn write_asset_collection<T: Asset + Serialize>(
+        compiler: &PackCompiler<'_>,
         collection: &HashMap<Identifier, T>,
     ) -> anyhow::Result<()> {
         for (id, asset) in collection {
@@ -215,8 +215,8 @@ impl CompiledAssetLibrary {
         Ok(())
     }
 
-    async fn write_asset<'a, T: Asset + Serialize>(
-        compiler: &PackCompiler<'a>,
+    async fn write_asset<T: Asset + Serialize>(
+        compiler: &PackCompiler<'_>,
         id: &Identifier,
         asset: &T,
     ) -> anyhow::Result<()> {
@@ -243,8 +243,8 @@ impl CompiledAssetLibrary {
         Ok(())
     }
 
-    async fn copy_asset<'a, P: AsRef<Path>>(
-        compiler: &PackCompiler<'a>,
+    async fn copy_asset<P: AsRef<Path>>(
+        compiler: &PackCompiler<'_>,
         id: &Identifier,
         asset: P,
         asset_type: &AssetType,

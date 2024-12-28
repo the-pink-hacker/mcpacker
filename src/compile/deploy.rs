@@ -34,7 +34,7 @@ impl DeployAPIContext {
     }
 }
 
-impl<'a> PackCompiler<'a> {
+impl PackCompiler<'_> {
     pub async fn deploy(
         self,
         api_context: &DeployAPIContext,

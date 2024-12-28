@@ -219,7 +219,7 @@ impl ModelElement {
     pub fn set_cullface(&mut self, cullface: CullDirection) {
         (&mut self.faces)
             .into_iter()
-            .filter_map(|face| face)
+            .flatten()
             .for_each(|face| face.cullface = cullface);
     }
 
@@ -316,7 +316,7 @@ pub struct ElementFaces {
 impl ElementFaces {
     pub fn set_cullface(&mut self, value: &CullDirection) {
         for face in self.into_iter().flatten() {
-            face.cullface = value.clone();
+            face.cullface = *value;
         }
     }
 

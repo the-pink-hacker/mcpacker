@@ -18,7 +18,7 @@ pub trait Modifier<A, S> {
     }
 }
 
-impl<'a> PackCompiler<'a> {
+impl PackCompiler<'_> {
     pub fn process_modifiers(&mut self, library: &mut CompiledAssetLibrary) -> anyhow::Result<()> {
         library.apply_model_modifiers(self);
 

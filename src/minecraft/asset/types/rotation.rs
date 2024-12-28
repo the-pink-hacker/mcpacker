@@ -70,7 +70,7 @@ impl Serialize for StateRotation {
 
 struct StateRotationVisitor;
 
-impl<'de> Visitor<'de> for StateRotationVisitor {
+impl Visitor<'_> for StateRotationVisitor {
     type Value = StateRotation;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

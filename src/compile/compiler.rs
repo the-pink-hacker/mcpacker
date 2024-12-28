@@ -15,7 +15,7 @@ use super::PackCompiler;
 const PACK_META_NAME: &str = "pack.mcmeta";
 const PACK_ICON_NAME: &str = "pack.png";
 
-impl<'a> PackCompiler<'a> {
+impl PackCompiler<'_> {
     pub async fn run(mut self) -> Self {
         println!("Compiling...");
 

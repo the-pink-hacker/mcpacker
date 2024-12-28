@@ -16,7 +16,7 @@ impl Translate for Model {
 
 impl Translate for ModelElement {
     fn translate(&mut self, amount: &Vec3) {
-        self.from += amount.clone();
-        self.to += amount.clone();
+        self.from += *amount;
+        self.to += *amount;
     }
 }

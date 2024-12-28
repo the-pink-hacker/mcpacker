@@ -1,10 +1,11 @@
 use std::{
+    ffi::OsStr,
     fmt,
     path::{Path, PathBuf},
     str::FromStr,
 };
 
-use anyhow::{bail, Context};
+use anyhow::{anyhow, bail, Context};
 use serde::{de::Visitor, Deserialize, Serialize};
 
 const DEFAULT_NAMESPACE: &str = "minecraft";
@@ -59,25 +60,70 @@ impl Identifier {
 
         let asset_type = path_list
             .next()
-            .and_then(|f| f.to_str())
-            .and_then(|f| match f {
-                "models" => Some(AssetType::Model),
-                "blockstates" => Some(AssetType::Blockstate),
-                "textures" => value.extension().and_then(|e| match e.to_str() {
-                    Some("png") => Some(AssetType::Texture),
-                    Some("mcmeta") => Some(AssetType::TextureMeta),
-                    _ => None,
-                }),
-                "atlases" => Some(AssetType::Atlas),
-                "modifiers" => Some(AssetType::Modifier),
-                "modifiers.toml" => Some(AssetType::ModifierIndex),
-                _ => None,
-            })
+            .and_then(OsStr::to_str)
             .with_context(|| {
                 format!(
-                    "Failed to parse asset type from path: {}",
+                    "Failed to parse top level path: {}",
                     value.to_string_lossy()
                 )
+            })
+            .and_then(|f| match f {
+                "models" => value
+                    .iter()
+                    .nth(2)
+                    .with_context(|| {
+                        format!("Top level models not allow: {}", value.to_string_lossy())
+                    })?
+                    .to_str()
+                    .with_context(|| {
+                        format!("Failed to parse model folder: {}", value.to_string_lossy())
+                    })
+                    .and_then(|folder| match folder {
+                        "block" => Ok(AssetType::Model),
+                        "item" => Err(anyhow!(
+                            "Item models usupported: {}",
+                            value.to_string_lossy()
+                        )),
+                        "template" => {
+                            eprintln!(
+                                "[WARNING] Top level templates deprecated: {}",
+                                value.to_string_lossy()
+                            );
+                            Ok(AssetType::Model)
+                        }
+                        _ => Err(anyhow!(
+                            "Unsupported model type '{}': {}",
+                            folder,
+                            value.to_string_lossy()
+                        )),
+                    }),
+                "blockstates" => Ok(AssetType::Blockstate),
+                "textures" => value
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .with_context(|| {
+                        format!(
+                            "Failed to parse texture extension: {}",
+                            value.to_string_lossy()
+                        )
+                    })
+                    .and_then(|extension| match extension {
+                        "png" => Ok(AssetType::Texture),
+                        "mcmeta" => Ok(AssetType::TextureMeta),
+                        _ => Err(anyhow!(
+                            "Texture extension '{}' unsupported: {}",
+                            extension,
+                            value.to_string_lossy()
+                        )),
+                    }),
+                "atlases" => Ok(AssetType::Atlas),
+                "modifiers" => Ok(AssetType::Modifier),
+                "modifiers.toml" => Ok(AssetType::ModifierIndex),
+                _ => Err(anyhow!(
+                    "Unsupported asset type '{}': {}",
+                    f,
+                    value.to_string_lossy()
+                )),
             })?;
 
         let asset_path = path_list

@@ -24,6 +24,7 @@ pub enum AssetType {
     Language,
     Modifier,
     ModifierIndex,
+    ItemModelDefinition,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -79,11 +80,7 @@ impl Identifier {
                         format!("Failed to parse model folder: {}", value.to_string_lossy())
                     })
                     .and_then(|folder| match folder {
-                        "block" => Ok(AssetType::Model),
-                        "item" => Err(anyhow!(
-                            "Item models usupported: {}",
-                            value.to_string_lossy()
-                        )),
+                        "block" | "item" => Ok(AssetType::Model),
                         "template" => {
                             eprintln!(
                                 "[WARNING] Top level templates deprecated: {}",
@@ -119,6 +116,7 @@ impl Identifier {
                 "atlases" => Ok(AssetType::Atlas),
                 "modifiers" => Ok(AssetType::Modifier),
                 "modifiers.toml" => Ok(AssetType::ModifierIndex),
+                "items" => Ok(AssetType::ItemModelDefinition),
                 _ => Err(anyhow!(
                     "Unsupported asset type '{}': {}",
                     f,
@@ -147,6 +145,7 @@ impl Identifier {
             AssetType::Language => ("lang", "json"),
             AssetType::Modifier => ("modifiers", "toml"),
             AssetType::ModifierIndex => (".", "toml"),
+            AssetType::ItemModelDefinition => ("items", "json"),
         };
 
         asset_path
@@ -268,10 +267,30 @@ mod tests {
     }
 
     #[test]
-    fn from_path_minecraft_model() {
+    fn from_path_minecraft_model_block() {
         let id = Identifier::minecraft("block/sponge");
         let result = Identifier::from_path("minecraft/models/block/sponge.json").unwrap();
         assert_eq!((AssetType::Model, id), result);
+    }
+
+    #[test]
+    fn from_path_minecraft_model_item() {
+        let id = Identifier::minecraft("item/sponge");
+        let result = Identifier::from_path("minecraft/models/item/sponge.json").unwrap();
+        assert_eq!((AssetType::Model, id), result);
+    }
+
+    #[test]
+    fn from_path_minecraft_model_invalid() {
+        let result = Identifier::from_path("minecraft/models/sponge.json");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn from_path_minecraft_item_definition() {
+        let id = Identifier::minecraft("sponge");
+        let result = Identifier::from_path("minecraft/items/sponge.json").unwrap();
+        assert_eq!((AssetType::ItemModelDefinition, id), result);
     }
 
     #[test]

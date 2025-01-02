@@ -16,7 +16,10 @@ use crate::{
         blockstate::Blockstate,
         model::Model,
         texture::TextureMeta,
-        types::identifier::{AssetType, Identifier},
+        types::{
+            identifier::{AssetType, Identifier},
+            item::ItemModelDefinition,
+        },
         Asset,
     },
 };
@@ -41,6 +44,7 @@ pub struct AssetLibrary {
     pub atlases: HashMap<Identifier, Atlas>,
     pub textures: HashMap<Identifier, PathBuf>,
     pub textures_meta: HashMap<Identifier, TextureMeta>,
+    pub item_model_definitions: HashMap<Identifier, ItemModelDefinition>,
 }
 
 impl AssetLibrary {
@@ -73,6 +77,10 @@ impl AssetLibrary {
             }
             AssetType::ModifierIndex => {
                 Self::load_asset_single(asset_path_absolute, &mut self.modifier_index).await
+            }
+            AssetType::ItemModelDefinition => {
+                Self::load_asset_generic(id, asset_path_absolute, &mut self.item_model_definitions)
+                    .await
             }
             _ => Err(anyhow!("Asset type unsupported")),
         }
@@ -156,6 +164,7 @@ impl AssetLibrary {
             atlases: self.atlases,
             textures: self.textures,
             textures_meta: self.textures_meta,
+            item_model_definitions: self.item_model_definitions,
         })
     }
 }
@@ -188,6 +197,7 @@ pub struct CompiledAssetLibrary {
     pub atlases: HashMap<Identifier, Atlas>,
     pub textures: HashMap<Identifier, PathBuf>,
     pub textures_meta: HashMap<Identifier, TextureMeta>,
+    pub item_model_definitions: HashMap<Identifier, ItemModelDefinition>,
 }
 
 impl CompiledAssetLibrary {
@@ -196,6 +206,7 @@ impl CompiledAssetLibrary {
         Self::write_asset_collection(compiler, &self.blockstates).await?;
         Self::write_asset_collection(compiler, &self.atlases).await?;
         Self::write_asset_collection(compiler, &self.textures_meta).await?;
+        Self::write_asset_collection(compiler, &self.item_model_definitions).await?;
 
         for (id, texture) in &self.textures {
             Self::copy_asset(compiler, id, texture, &AssetType::Texture).await?;

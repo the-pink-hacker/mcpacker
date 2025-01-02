@@ -1,9 +1,13 @@
-use crate::{compile::modifier::zfighting::Direction, minecraft::serialize::*};
+use crate::{
+    asset::LoadableAsset,
+    compile::modifier::zfighting::Direction,
+    minecraft::{asset::Asset, serialize::*},
+};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, OneOrMany};
 
-use super::identifier::Identifier;
+use super::identifier::{AssetType, Identifier};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ItemModelDefinition {
@@ -12,31 +16,43 @@ pub struct ItemModelDefinition {
     pub model: ModelType,
 }
 
+impl Asset for ItemModelDefinition {
+    fn get_type() -> AssetType {
+        AssetType::ItemModelDefinition
+    }
+}
+
+impl LoadableAsset for ItemModelDefinition {
+    fn load_asset<R: AsRef<str>>(raw: R) -> anyhow::Result<Self> {
+        Ok(serde_json::from_str(raw.as_ref())?)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum ModelType {
-    #[serde(rename = "minecraft:model")]
+    #[serde(alias = "minecraft:model")]
     Model {
         model: Identifier,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         tints: Vec<TintSource>,
     },
-    #[serde(rename = "minecraft:composite")]
+    #[serde(alias = "minecraft:composite")]
     Composite { models: Vec<ModelType> },
-    #[serde(rename = "minecraft:condition")]
+    #[serde(alias = "minecraft:condition")]
     Condition {
         #[serde(flatten)]
         property: ConditionProperty,
         on_true: Box<ModelType>,
         on_false: Box<ModelType>,
     },
-    #[serde(rename = "minecraft:select")]
+    #[serde(alias = "minecraft:select")]
     Select {
         #[serde(flatten)]
         property: SelectProperty,
         fallback: Box<ModelType>,
     },
-    #[serde(rename = "minecraft:range_dispatch")]
+    #[serde(alias = "minecraft:range_dispatch")]
     RangeDispatch {
         #[serde(flatten)]
         property: NumericProperty,
@@ -48,11 +64,14 @@ pub enum ModelType {
         entries: Vec<RangeDispatchEntry>,
         fallback: Box<ModelType>,
     },
-    #[serde(rename = "minecraft:empty")]
+    #[serde(alias = "minecraft:empty")]
     Empty,
-    #[serde(rename = "minecraft:bundle/selected_item")]
+    #[serde(
+        rename = "bundle/selected_item",
+        alias = "minecraft:bundle/selected_item"
+    )]
     BundleSelectedItem,
-    #[serde(rename = "minecraft:special")]
+    #[serde(alias = "minecraft:special")]
     Special {
         model: SpecialModel,
         base: Identifier,
@@ -70,23 +89,23 @@ impl ModelType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum TintSource {
-    #[serde(rename = "minecraft:constant")]
+    #[serde(alias = "minecraft:constant")]
     Constant { value: ColorRGB },
-    #[serde(rename = "minecraft:dye")]
+    #[serde(alias = "minecraft:dye")]
     Dye(DefaultColor),
-    #[serde(rename = "minecraft:grass")]
+    #[serde(alias = "minecraft:grass")]
     Grass(DefaultColor),
-    #[serde(rename = "minecraft:firework")]
+    #[serde(alias = "minecraft:firework")]
     Firework(DefaultColor),
-    #[serde(rename = "minecraft:potion")]
+    #[serde(alias = "minecraft:potion")]
     Potion(DefaultColor),
-    #[serde(rename = "minecraft:map_color")]
+    #[serde(alias = "minecraft:map_color")]
     MapColor(DefaultColor),
-    #[serde(rename = "minecraft:team")]
+    #[serde(alias = "minecraft:team")]
     Team(DefaultColor),
-    #[serde(rename = "minecraft:custom_model_data")]
+    #[serde(alias = "minecraft:custom_model_data")]
     CustomModelData {
         #[serde(flatten)]
         custom_model_data: CustomModelData,
@@ -107,58 +126,61 @@ pub enum ColorRGB {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "property")]
+#[serde(tag = "property", rename_all = "snake_case")]
 pub enum ConditionProperty {
-    #[serde(rename = "minecraft:using_item")]
+    #[serde(alias = "minecraft:using_item")]
     UsingItem,
-    #[serde(rename = "minecraft:broken")]
+    #[serde(alias = "minecraft:broken")]
     Broken,
-    #[serde(rename = "minecraft:damaged")]
+    #[serde(alias = "minecraft:damaged")]
     Damaged,
-    #[serde(rename = "minecraft:has_component")]
+    #[serde(alias = "minecraft:has_component")]
     HasComponent {
         component: String,
         #[serde(default, skip_serializing_if = "is_false")]
         ignore_default: bool,
     },
-    #[serde(rename = "minecraft:fishing_rod/cast")]
+    #[serde(alias = "minecraft:fishing_rod/cast")]
     FishingRodCast,
-    #[serde(rename = "minecraft:bundle/has_selected_item")]
+    #[serde(
+        rename = "bundle/has_selected_item",
+        alias = "minecraft:bundle/has_selected_item"
+    )]
     BundleHasSelectedItem,
-    #[serde(rename = "minecraft:selected")]
+    #[serde(alias = "minecraft:selected")]
     Selected,
-    #[serde(rename = "minecraft:carried")]
+    #[serde(alias = "minecraft:carried")]
     Carried,
-    #[serde(rename = "minecraft:extended_view")]
+    #[serde(alias = "minecraft:extended_view")]
     ExtendedView,
-    #[serde(rename = "minecraft:keybind_down")]
+    #[serde(alias = "minecraft:keybind_down")]
     KeybindDown { keybind: String },
-    #[serde(rename = "minecraft:view_entity")]
+    #[serde(alias = "minecraft:view_entity")]
     ViewEntity,
-    #[serde(rename = "minecraft:custom_model_data")]
+    #[serde(alias = "minecraft:custom_model_data")]
     CustomModelData(CustomModelData),
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "property")]
+#[serde(tag = "property", rename_all = "snake_case")]
 pub enum SelectProperty {
-    #[serde(rename = "minecraft:main_hand")]
+    #[serde(alias = "minecraft:main_hand")]
     MainHand { cases: Vec<SelectCase<MainHand>> },
-    #[serde(rename = "minecraft:charge_type")]
+    #[serde(alias = "minecraft:charge_type")]
     ChargeType { cases: Vec<SelectCase<ChargeType>> },
-    #[serde(rename = "minecraft:trim_material")]
+    #[serde(alias = "minecraft:trim_material")]
     TrimMaterial { cases: Vec<SelectCase<Identifier>> },
-    #[serde(rename = "minecraft:block_state")]
+    #[serde(alias = "minecraft:block_state")]
     BlockState {
         cases: Vec<SelectCase<String>>,
         block_state_property: String,
     },
-    #[serde(rename = "minecraft:display_context")]
+    #[serde(alias = "minecraft:display_context")]
     DisplayContext {
         cases: Vec<SelectCase<DisplayContext>>,
     },
-    #[serde(rename = "minecraft:local_time")]
+    #[serde(alias = "minecraft:local_time")]
     LocalTime {
         cases: Vec<SelectCase<String>>,
         #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -166,11 +188,11 @@ pub enum SelectProperty {
         time_zone: Option<String>,
         pattern: String,
     },
-    #[serde(rename = "minecraft:context_dimension")]
+    #[serde(alias = "minecraft:context_dimension")]
     ContextDimension { cases: Vec<SelectCase<Identifier>> },
-    #[serde(rename = "minecraft:context_entity_type")]
+    #[serde(alias = "minecraft:context_entity_type")]
     ContextEntityType { cases: Vec<SelectCase<Identifier>> },
-    #[serde(rename = "minecraft:custom_model_data")]
+    #[serde(alias = "minecraft:custom_model_data")]
     CustomModelData {
         cases: Vec<SelectCase<String>>,
         #[serde(flatten)]
@@ -234,42 +256,42 @@ pub struct RangeDispatchEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "property")]
+#[serde(tag = "property", rename_all = "snake_case")]
 pub enum NumericProperty {
-    #[serde(rename = "minecraft:bundle/fullness")]
+    #[serde(rename = "bundle/fullness", alias = "minecraft:bundle/fullness")]
     BundleFullness,
-    #[serde(rename = "minecraft:damage")]
+    #[serde(alias = "minecraft:damage")]
     Damage {
         #[serde(default = "get_true", skip_serializing_if = "is_true")]
         normalize: bool,
     },
-    #[serde(rename = "minecraft:count")]
+    #[serde(alias = "minecraft:count")]
     Count {
         #[serde(default = "get_true", skip_serializing_if = "is_true")]
         normalize: bool,
     },
-    #[serde(rename = "minecraft:cooldown")]
+    #[serde(alias = "minecraft:cooldown")]
     Cooldown,
-    #[serde(rename = "minecraft:time")]
+    #[serde(alias = "minecraft:time")]
     Time {
         source: TimeSource,
         #[serde(default = "get_true", skip_serializing_if = "is_true")]
         wobble: bool,
     },
-    #[serde(rename = "minecraft:compass")]
+    #[serde(alias = "minecraft:compass")]
     Compass {
         target: CompassTarget,
         #[serde(default = "get_true", skip_serializing_if = "is_true")]
         wobble: bool,
     },
-    #[serde(rename = "minecraft:crossbow/pull")]
+    #[serde(rename = "crossbow/pull", alias = "minecraft:crossbow/pull")]
     CrossbowPull,
-    #[serde(rename = "minecraft:use_duration")]
+    #[serde(alias = "minecraft:use_duration")]
     UseDuration {
         #[serde(default = "get_true", skip_serializing_if = "is_true")]
         remaining: bool,
     },
-    #[serde(rename = "minecraft:use_cycle")]
+    #[serde(alias = "minecraft:use_cycle")]
     UseCycle {
         #[serde(
             default = "NumericProperty::get_default_use_cycle_period",
@@ -277,7 +299,7 @@ pub enum NumericProperty {
         )]
         period: f32,
     },
-    #[serde(rename = "minecraft:custom_model_data")]
+    #[serde(alias = "minecraft:custom_model_data")]
     CustomModelData(CustomModelData),
 }
 
@@ -310,23 +332,23 @@ pub enum CompassTarget {
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum SpecialModel {
-    #[serde(rename = "minecraft:bed")]
+    #[serde(alias = "minecraft:bed")]
     Bed { texture: Identifier },
-    #[serde(rename = "minecraft:banner")]
+    #[serde(alias = "minecraft:banner")]
     Banner { color: DyeColor },
-    #[serde(rename = "minecraft:conduit")]
+    #[serde(alias = "minecraft:conduit")]
     Conduit,
-    #[serde(rename = "minecraft:chest")]
+    #[serde(alias = "minecraft:chest")]
     Chest {
         texture: Identifier,
         #[serde(default, skip_serializing_if = "SpecialModel::is_openness_default")]
         openness: f32,
     },
-    #[serde(rename = "minecraft:decorated_pot")]
+    #[serde(alias = "minecraft:decorated_pot")]
     DecoratedPot,
-    #[serde(rename = "minecraft:head")]
+    #[serde(alias = "minecraft:head")]
     Head {
         kind: HeadKind,
         texture: Option<Identifier>,
@@ -336,7 +358,7 @@ pub enum SpecialModel {
         )]
         animation: f32,
     },
-    #[serde(rename = "minecraft:shulker_box")]
+    #[serde(alias = "minecraft:shulker_box")]
     ShulkerBox {
         texture: Identifier,
         #[serde(default, skip_serializing_if = "SpecialModel::is_openness_default")]
@@ -347,13 +369,13 @@ pub enum SpecialModel {
         )]
         orientation: Direction,
     },
-    #[serde(rename = "minecraft:shield")]
+    #[serde(alias = "minecraft:shield")]
     Shield,
-    #[serde(rename = "minecraft:standing_sign")]
+    #[serde(alias = "minecraft:standing_sign")]
     StandingSign(SignModel),
-    #[serde(rename = "minecraft:hanging_sign")]
+    #[serde(alias = "minecraft:hanging_sign")]
     HangingSign(SignModel),
-    #[serde(rename = "minecraft:trident")]
+    #[serde(alias = "minecraft:trident")]
     Trident,
 }
 
